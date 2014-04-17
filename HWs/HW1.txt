@@ -1,0 +1,8 @@
+Generally in Java, programming to interface is preferred over implementation.
+
+Extending from Thread means a new implementation of the Thread class.
+So your code may need to consider any rules or limitations with the parent class.
+
+Use the Runnable interface is more flexible since only the run method is required.
+It permits you to extend it from another parent class.
+Another benefit is that the same Runnable instance can by shared by multiple threads.
