@@ -1,0 +1,16 @@
+hw4-1
+Editor with autosave function possible race condition:
+1. Editor called change(), set changed to true
+2. AutoSaver called save(), be swapped out before set changed to false
+3. Editor called save()
+4. Editor called change() again and set changed to true
+5. AutoSaver regain cpu time, set changed to false
+Now the File is in a inconsistent state as changed does not reflect real state. 
+
+hw4-2
+Singleton possible race condition:
+1. one thread calls getInstance(), find instance is null, 
+be swapped out before calling the constructor
+2. another thread calls getInstance(), also find instance is null and 
+calls the constructor to create a new Singleton
+3. previous thread regain cpu time, go ahead and create another Singleton
