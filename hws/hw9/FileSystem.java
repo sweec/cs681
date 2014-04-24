@@ -360,13 +360,15 @@ public class FileSystem {
 		}
 		
 		FileQueue queue = new FileQueue();
+		Thread[] cths = new Thread[3];
+		Thread[] iths = new Thread[3];
 		FileCrawler crawlers[] = new FileCrawler[3];
 		FileIndexer indexers[] = new FileIndexer[3];
 		for (int i=0;i<3;i++) {
 			crawlers[i] = new FileCrawler(fs.drives.get(i), queue);
 			indexers[i] = new FileIndexer(queue);
-			new Thread(crawlers[i]).start();
-			new Thread(indexers[i]).start();
+			cths[i] = new Thread(crawlers[i]); cths[i].start();
+			iths[i] = new Thread(indexers[i]); iths[i].start();
 		}
 		try {
 			Thread.sleep(1000);
@@ -374,7 +376,9 @@ public class FileSystem {
 		}
 		for (int i=0;i<3;i++) {
 			crawlers[i].setDone(true);
+			cths[i].interrupt();
 			indexers[i].setDone(true);
+			iths[i].interrupt();
 		}
 	}
 }

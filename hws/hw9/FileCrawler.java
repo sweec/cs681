@@ -12,7 +12,6 @@ public class FileCrawler implements Runnable {
 	
 	public void setDone(boolean done) {
 		this.done = done;
-		queue.setDone(done);
 	}
 	
 	public void crawl(Directory dir) {

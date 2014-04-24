@@ -10,7 +10,6 @@ public class FileIndexer implements Runnable {
 	
 	public void setDone(boolean done) {
 		this.done = done;
-		queue.setDone(done);
 	}
 	
 	public void indexFile(File file) {
