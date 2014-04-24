@@ -5,8 +5,7 @@ import java.util.Date;
 public class File extends FSElement {
 
 	public File(String name, int size, Directory parent, Date created) {
-		super(parent, created);
-		setName(name);
+		super(name, parent, created);
 		setSize(size);
 	}
 
@@ -16,7 +15,12 @@ public class File extends FSElement {
 	}
 
 	@Override
-	public void calculateSize() {
+	public void accept(FSVisitor v) {
+		v.visit(this);
 	}
 	
+	@Override
+	public int getDiskUtil() {
+		return getSize();
+	}
 }
