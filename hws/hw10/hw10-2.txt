@@ -1,0 +1,13 @@
+The use of lock in below code is required.
+queueLock.lock();
+runnables.add(obj);
+runnablesAvailable.signalAll();
+queueLock.unlock();
+
+Although "runnables.add(obj)" is atomic code, the execution of 
+runnables.add(obj);
+runnablesAvailable.signalAll();
+is not.
+A thread switch can happen between them or at second line.
+If it's not protected by the lock, "runnables" can be emptied again by other threads.
+If that happens, the call to second line will cause error.
