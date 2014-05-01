@@ -1,0 +1,8 @@
+Each instance of ReentrantReadWriteLock is used to protect the access of one resource.
+If it has multiple instances of ReadLock or WriteLock, 
+it will just make the control of the access more complicated.
+Because it will have to check how many and what kind of locks are held.
+It's much simple by using single instance of ReadLock and WriteLock each.
+As long as the WriteLock cannot be shared and cannot be co-held with ReadLock, 
+the access of the resource will be safe.
+Singleton implementation will ensure this. 
