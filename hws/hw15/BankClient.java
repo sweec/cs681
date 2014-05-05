@@ -1,7 +1,8 @@
-package cs681.net;
+package hw15;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Random;
 import java.util.Scanner;
 import java.io.*;
 
@@ -56,20 +57,27 @@ public class BankClient
 
 	public static void main(String[] args)
 	{
+		Random g = new Random();
 		String server = "localhost";
 		if (args.length > 0)
 			server = args[0];
 		BankClient client = new BankClient();
 		client.init(server);
-		
-		client.sendCommand( "BALANCE\n" );
-		System.out.println( client.getResponse() );
-		
-		client.sendCommand( "DEPOSIT 100\n" );
-		System.out.println( client.getResponse() );
-		
-		client.sendCommand( "WITHDRAW 50\n" );
-		System.out.println( client.getResponse() );
+		for (int i=0;i<20;i++) {
+			client.sendCommand( "BALANCE\n" );
+			System.out.println( client.getResponse() );
+
+			client.sendCommand( "DEPOSIT 100\n" );
+			System.out.println( client.getResponse() );
+
+			client.sendCommand( "WITHDRAW 90\n" );
+			System.out.println( client.getResponse() );
+			try {
+				Thread.sleep(g.nextInt(500));
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 		
 		client.sendCommand( "QUIT\n" );
 	}

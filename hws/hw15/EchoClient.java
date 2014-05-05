@@ -1,11 +1,11 @@
-package cs681.net;
+package hw15;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
 import java.io.*;
 
-public class BankClient
+public class EchoClient
 {
 	private static final int BANKPORT = 8888;
 	private Socket socket;
@@ -32,7 +32,7 @@ public class BankClient
 	
 	public void sendCommand( String command )
 	{
-		System.out.print( "Sending " + command );
+		System.out.print( command );
 		out.print( command );
 		out.flush();
 		if( command.equals("QUIT") )
@@ -59,7 +59,7 @@ public class BankClient
 		String server = "localhost";
 		if (args.length > 0)
 			server = args[0];
-		BankClient client = new BankClient();
+		EchoClient client = new EchoClient();
 		client.init(server);
 		
 		client.sendCommand( "BALANCE\n" );
