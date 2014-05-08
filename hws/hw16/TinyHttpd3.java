@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
+import java.util.TimeZone;
 import java.util.regex.Pattern;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
@@ -22,6 +23,10 @@ public class TinyHttpd3 {
 	static Pattern htmlP = Pattern.compile(".*html$");
 	static Pattern jpgP = Pattern.compile(".*jpg$");
 	static Pattern pngP = Pattern.compile(".*png$");
+	static SimpleDateFormat GMT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
+	static {
+		GMT.setTimeZone(TimeZone.getTimeZone("GMT"));
+	}
 
 	public void init() {
 		try {
@@ -101,7 +106,7 @@ public class TinyHttpd3 {
 							else
 								sendFile(out, file, type);
 						} else if (headP.matcher(tokens[0]).matches()) {
-							sendHead(out, file, type);
+							sendHeader(out, file, type);
 						}
 					} else
 						sendErrorMessage(out, HttpURLConnection.HTTP_NOT_FOUND);
@@ -133,13 +138,8 @@ public class TinyHttpd3 {
 	
 	private void sendFile(PrintStream out, File file, String type){
 		try{
-			out.println("HTTP/1.0 200 OK");
-			out.println("Content-Type: " + type);
-			
+			sendHeader(out, file, type);  
 			int len = (int) file.length();
-			out.println("Content-Length: " + len);
-			out.println("");  
-
 			DataInputStream fin = new DataInputStream(new FileInputStream(file));
 			byte buf[] = new byte[len];
 			fin.readFully(buf);
@@ -151,7 +151,7 @@ public class TinyHttpd3 {
 		}         
 	}
 	
-	private void sendHead(PrintStream out, File file, String type) {
+	private void sendHeader(PrintStream out, File file, String type) {
 		if (type == null)
 			type = "Unsupported";
 		out.println("HTTP/1.0 200 OK");
@@ -159,9 +159,8 @@ public class TinyHttpd3 {
 		out.println("Content-Type: " + type);
 		int len = (int) file.length();
 		out.println("Content-Length: " + len);
-		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
-		out.println("Date: "+sdf.format(System.currentTimeMillis()));
-		out.println("Last-Modified: "+sdf.format(file.lastModified()));
+		out.println("Date: "+GMT.format(System.currentTimeMillis()));
+		out.println("Last-Modified: "+GMT.format(file.lastModified()));
 		out.println("");  
 	}
 	

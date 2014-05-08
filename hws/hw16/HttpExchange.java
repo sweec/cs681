@@ -1,6 +1,7 @@
 package hw16;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
@@ -10,34 +11,24 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
 
 public class HttpExchange {
 	private ServerSocket server;
 	private Socket client;
-	private BufferedReader in;
-	private PrintStream out;
 	private String[] requestLine;
 	private HashMap<String, String> requestHead = new HashMap<String, String>();
 	private String requestBody = null;
 	private String responseLine = null;
 	private HashMap<String, String> responseHead = new HashMap<String, String>();
-	private String responseBody = null;
-	
-	static Pattern getP = Pattern.compile("^GET.*");
-	static Pattern headP = Pattern.compile("^HEAD.*");
-	static Pattern postP = Pattern.compile("^POST.*");
-	static Pattern htmlP = Pattern.compile(".*html$");
-	static Pattern jpgP = Pattern.compile(".*jpg$");
-	static Pattern pngP = Pattern.compile(".*png$");
+	private byte[] responseBody = null;
 	
 	public HttpExchange(Socket client, ServerSocket server) {
 		this.server = server;
 		this.client = client;
+		BufferedReader in = null;
 		try {
-			in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
-			out = new PrintStream( client.getOutputStream() );  
 			client.setSoTimeout(30000);
+			in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
 			System.out.println( "I/O setup done" );
 
 			String line = in.readLine();
@@ -58,8 +49,15 @@ public class HttpExchange {
 			}
 		} catch(Exception exception) {
 			exception.printStackTrace();
+		} /*finally {
+			try {
+				if (in != null)
+					in.close();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 		}
-
+*/
 	}
 	
 	public SocketAddress getLocalAddress() {
@@ -102,10 +100,10 @@ public class HttpExchange {
 		return requestBody;
 	}
 	public void makeSuccessfulResponse() {
-		responseLine = "HTTP/1.1 200 OK";
+		responseLine = "HTTP/1.0 200 OK";
 	}
 	public void makeErrorResponse(int code) {
-		responseLine = "HTTP/1.1 "+code+" "+getHttpStatus(code);
+		responseLine = "HTTP/1.0 "+code+" "+getHttpStatus(code);
 	}
 	private static final HashMap<Integer, String> httpStatus = new HashMap<Integer, String>();
 	static {
@@ -129,16 +127,36 @@ public class HttpExchange {
 	public HashMap<String, String> getResponseHeaders() {
 		return responseHead;
 	}
-	public void setResponseBody(String content) {
+	public void setResponseBody(byte[] content) {
 		responseBody = content;
 	}
 	public void sendResponse() {
-		out.println(responseLine);
-		for (Entry<String, String> e:responseHead.entrySet())
-			out.println(e.getKey()+": "+e.getValue());
-		out.println("");
-		if (responseBody != null)
-			out.println(responseBody);
+		try {
+			PrintStream out = new PrintStream( client.getOutputStream() );
+			out.println(responseLine);
+			for (Entry<String, String> e:responseHead.entrySet())
+				out.println(e.getKey()+": "+e.getValue());
+			out.println("");
+			if (responseBody != null)
+				out.write(responseBody, 0, responseBody.length);
+			out.flush();
+			//out.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}  
+	}
+
+	public boolean isPersistent() {
+		String protocol = getProtocolName();
+		if (protocol == null || !protocol.equalsIgnoreCase("HTTP"))
+			return true;
+		String version = getProtocolVersion();
+		if (version == null || !version.equals("1.0"))
+			return true;
+		String conn = getResponseHeader("Connection");
+		if (conn == null || !conn.equalsIgnoreCase("keep-alive"))
+			return false;
+		return true;
 	}
 
 }

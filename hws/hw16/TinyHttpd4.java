@@ -3,25 +3,14 @@ package hw16;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.regex.Pattern;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.io.File;
 
 public class TinyHttpd4 {
 	private static final int PORT = 8888;
 	private ServerSocket serverSocket;
-	static Pattern getP = Pattern.compile("^GET.*");
-	static Pattern headP = Pattern.compile("^HEAD.*");
-	static Pattern htmlP = Pattern.compile(".*html$");
-	static Pattern jpgP = Pattern.compile(".*jpg$");
-	static Pattern pngP = Pattern.compile(".*png$");
 
 	public void init() {
 		try {
@@ -56,132 +45,83 @@ public class TinyHttpd4 {
 
 		@Override
 		public void run() {
-			executeCommand(client);
-		}
-		
-	}
-	
-	private void executeCommand( Socket client ){
-		try {
 			try {
-				client.setSoTimeout(30000);
-				BufferedReader in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
-				PrintStream out = new PrintStream( client.getOutputStream() );  
-				System.out.println( "I/O setup done" );
-				
-				String[] tokens = null;
-				String line = in.readLine();
-//				while ( in.ready() && line != null ) {
-				while( line != null ) {
-					System.out.println(line);
-					if(line.equals("")) break;
-					if (getP.matcher(line).matches()
-							|| headP.matcher(line).matches())
-						tokens = line.split("\\s+");
-					line = in.readLine();
+				try {
+					while (true) {
+						boolean done = executeCommand(new HttpExchange(client, serverSocket));
+						if (done)
+							break;
+					}
+				} finally {
+					client.close();
+					System.out.println( "A connection is closed." );				
 				}
-				System.out.println(line);
-
-				if (tokens == null || tokens.length < 2)
-					sendErrorMessage(out, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
-				else if (!tokens[1].startsWith("/"))
-					sendErrorMessage(out, HttpURLConnection.HTTP_BAD_REQUEST);
-				else {
-					if (tokens[1].equals("/"))
-						tokens[1] = "index.html";
-					else
-						tokens[1] = tokens[1].substring(1);
-					String type = getFileType(tokens[1]);
-					File file = new File(tokens[1]);
-					System.out.println(file.getName() + " requested.");
-					if (file.exists()) {
-						if (getP.matcher(tokens[0]).matches()) {
-							if (type == null)
-								sendErrorMessage(out, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
-							else
-								sendFile(out, file, type);
-						} else if (headP.matcher(tokens[0]).matches()) {
-							sendHead(out, file, type);
-						}
-					} else
-						sendErrorMessage(out, HttpURLConnection.HTTP_NOT_FOUND);
-				}
-
-				out.flush();
-				out.close();
-				in.close();
-			}finally {
-				client.close();
-				System.out.println( "A connection is closed." );				
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
-		catch(Exception exception) {
-			exception.printStackTrace();
-		}
-	} 
-	
-	private String getFileType(String name) {
-		if (htmlP.matcher(name).matches())
-			return "text/html";
-		else if (jpgP.matcher(name).matches())
-			return "image/jpg";
-		else if (pngP.matcher(name).matches())
-			return "image/png";
-		else
-			return null;
 	}
 	
-	private void sendFile(PrintStream out, File file, String type){
+	private boolean executeCommand( HttpExchange he) {
+		String command = he.getRequestCommand();
+		String url = he.getRrequestURI();
+		if (command == null || !url.startsWith("/"))
+			he.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
+		else {
+			if (url.equals("/"))
+				url = "index.html";
+			else
+				url = url.substring(1);
+			String type = HttpPattern.getFileType(url);
+			File file = new File(url);
+			System.out.println(file.getName() + " requested.");
+			if (!file.exists())
+				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
+			if (HttpPattern.isGetCommand(command)) {
+				if (type == null)
+					he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+				else {
+					setResponseHeader(he, file, type);  
+					sendFile(he, file, type);
+				}
+			} else if (HttpPattern.isHeadCommand(command)) {
+				setResponseHeader(he, file, type);
+			} else if (HttpPattern.isPostCommand(command)) {
+				System.out.println(he.getRequestBody());
+				he.makeSuccessfulResponse();
+			} else
+				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+			he.sendResponse();
+		}
+		if (he.isPersistent())
+			return false;
+		else
+			return true;
+	}
+	
+	private void sendFile(HttpExchange he, File file, String type){
 		try{
-			out.println("HTTP/1.0 200 OK");
-			out.println("Content-Type: " + type);
-			
 			int len = (int) file.length();
-			out.println("Content-Length: " + len);
-			out.println("");  
-
 			DataInputStream fin = new DataInputStream(new FileInputStream(file));
 			byte buf[] = new byte[len];
 			fin.readFully(buf);
-			out.write(buf, 0, len);
-			out.flush();
+			he.setResponseBody(buf);;
 			fin.close();
 		}catch(IOException exception){
 			exception.printStackTrace();
 		}         
 	}
 	
-	private void sendHead(PrintStream out, File file, String type) {
+	private void setResponseHeader(HttpExchange he, File file, String type) {
 		if (type == null)
 			type = "Unsupported";
-		out.println("HTTP/1.0 200 OK");
-		out.println("Server: Java socket "+System.getProperty("os.name"));
-		out.println("Content-Type: " + type);
+		he.makeSuccessfulResponse();
+		he.setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
+		he.setResponseHeader("Content-Type", type);
 		int len = (int) file.length();
-		out.println("Content-Length: " + len);
-		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
-		out.println("Date: "+sdf.format(System.currentTimeMillis()));
-		out.println("Last-Modified: "+sdf.format(file.lastModified()));
-		out.println("");  
-	}
-	
-	private void sendErrorMessage(PrintStream out, int code) {
-		out.println("HTTP/1.0 "+code+" "+getHttpStatus(code));
-		out.println("");         
-	}
-	
-	private static final HashMap<Integer, String> httpStatus = new HashMap<Integer, String>();
-	static {
-		httpStatus.put(HttpURLConnection.HTTP_OK, "OK");
-		httpStatus.put(HttpURLConnection.HTTP_BAD_REQUEST, "Bad Request");
-		httpStatus.put(HttpURLConnection.HTTP_UNAUTHORIZED, "Unauthorized (authorization required)");
-		httpStatus.put(HttpURLConnection.HTTP_NOT_FOUND, "Not Found");
-		httpStatus.put(HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal Server Error");
-		httpStatus.put(HttpURLConnection.HTTP_NOT_IMPLEMENTED, "Not Implemented");
-		httpStatus.put(HttpURLConnection.HTTP_UNAVAILABLE, "Service Unavailable");
-	}
-	private static String getHttpStatus(int code) {
-		return httpStatus.get(code);
+		he.setResponseHeader("Content-Length", String.valueOf(len));
+		he.setResponseHeader("Date", HttpPattern.getGMT(System.currentTimeMillis()));
+		he.setResponseHeader("Last-Modified", HttpPattern.getGMT(file.lastModified()));
 	}
 	
 	public static void main(String[] args) {
