@@ -1,8 +1,6 @@
 package hw16;
 
 import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -15,22 +13,20 @@ import java.util.Map.Entry;
 public class HttpExchange {
 	private ServerSocket server;
 	private Socket client;
-	private String[] requestLine;
+	private PrintStream out;
+	private String[] requestLine = null;
 	private HashMap<String, String> requestHead = new HashMap<String, String>();
 	private String requestBody = null;
 	private String responseLine = null;
 	private HashMap<String, String> responseHead = new HashMap<String, String>();
 	private byte[] responseBody = null;
 	
-	public HttpExchange(Socket client, ServerSocket server) {
+	public HttpExchange(Socket client, ServerSocket server, BufferedReader in, PrintStream out) {
 		this.server = server;
 		this.client = client;
-		BufferedReader in = null;
+		this.out = out;
 		try {
 			client.setSoTimeout(30000);
-			in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
-			System.out.println( "I/O setup done" );
-
 			String line = in.readLine();
 			requestLine = line.split("\\s+");
 			System.out.println(line);
@@ -48,16 +44,8 @@ public class HttpExchange {
 				System.out.println(requestBody);
 			}
 		} catch(Exception exception) {
-			exception.printStackTrace();
-		} /*finally {
-			try {
-				if (in != null)
-					in.close();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			System.out.println("Socket read time out.");
 		}
-*/
 	}
 	
 	public SocketAddress getLocalAddress() {
@@ -131,19 +119,13 @@ public class HttpExchange {
 		responseBody = content;
 	}
 	public void sendResponse() {
-		try {
-			PrintStream out = new PrintStream( client.getOutputStream() );
-			out.println(responseLine);
-			for (Entry<String, String> e:responseHead.entrySet())
-				out.println(e.getKey()+": "+e.getValue());
-			out.println("");
-			if (responseBody != null)
-				out.write(responseBody, 0, responseBody.length);
-			out.flush();
-			//out.close();
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}  
+		out.println(responseLine);
+		for (Entry<String, String> e:responseHead.entrySet())
+			out.println(e.getKey()+": "+e.getValue());
+		out.println("");
+		if (responseBody != null)
+			out.write(responseBody, 0, responseBody.length);
+		out.flush();
 	}
 
 	public boolean isPersistent() {
@@ -153,7 +135,7 @@ public class HttpExchange {
 		String version = getProtocolVersion();
 		if (version == null || !version.equals("1.0"))
 			return true;
-		String conn = getResponseHeader("Connection");
+		String conn = getRequestHeader("Connection");
 		if (conn == null || !conn.equalsIgnoreCase("keep-alive"))
 			return false;
 		return true;

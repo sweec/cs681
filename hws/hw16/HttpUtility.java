@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
-public class HttpPattern {
+public class HttpUtility {
 	
 	static Pattern getP = Pattern.compile("^GET.*");
 	static Pattern headP = Pattern.compile("^HEAD.*");

@@ -3,10 +3,13 @@ package hw16;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
 
 public class TinyHttpd4 {
 	private static final int PORT = 8888;
@@ -46,13 +49,18 @@ public class TinyHttpd4 {
 		@Override
 		public void run() {
 			try {
+				BufferedReader in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
+				PrintStream out = new PrintStream( client.getOutputStream() );
+				System.out.println( "I/O setup done" );
 				try {
 					while (true) {
-						boolean done = executeCommand(new HttpExchange(client, serverSocket));
+						boolean done = executeCommand(new HttpExchange(client, serverSocket, in, out));
 						if (done)
 							break;
 					}
 				} finally {
+					in.close();
+					out.close();
 					client.close();
 					System.out.println( "A connection is closed." );				
 				}
@@ -64,29 +72,31 @@ public class TinyHttpd4 {
 	
 	private boolean executeCommand( HttpExchange he) {
 		String command = he.getRequestCommand();
+		if (command == null)
+			return true;
 		String url = he.getRrequestURI();
-		if (command == null || !url.startsWith("/"))
+		if(!url.startsWith("/"))
 			he.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
 		else {
 			if (url.equals("/"))
 				url = "index.html";
 			else
 				url = url.substring(1);
-			String type = HttpPattern.getFileType(url);
+			String type = HttpUtility.getFileType(url);
 			File file = new File(url);
 			System.out.println(file.getName() + " requested.");
 			if (!file.exists())
 				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
-			if (HttpPattern.isGetCommand(command)) {
+			if (HttpUtility.isGetCommand(command)) {
 				if (type == null)
 					he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 				else {
 					setResponseHeader(he, file, type);  
 					sendFile(he, file, type);
 				}
-			} else if (HttpPattern.isHeadCommand(command)) {
+			} else if (HttpUtility.isHeadCommand(command)) {
 				setResponseHeader(he, file, type);
-			} else if (HttpPattern.isPostCommand(command)) {
+			} else if (HttpUtility.isPostCommand(command)) {
 				System.out.println(he.getRequestBody());
 				he.makeSuccessfulResponse();
 			} else
@@ -120,8 +130,8 @@ public class TinyHttpd4 {
 		he.setResponseHeader("Content-Type", type);
 		int len = (int) file.length();
 		he.setResponseHeader("Content-Length", String.valueOf(len));
-		he.setResponseHeader("Date", HttpPattern.getGMT(System.currentTimeMillis()));
-		he.setResponseHeader("Last-Modified", HttpPattern.getGMT(file.lastModified()));
+		he.setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
+		he.setResponseHeader("Last-Modified", HttpUtility.getGMT(file.lastModified()));
 	}
 	
 	public static void main(String[] args) {
