@@ -87,7 +87,7 @@ public class TinyHttpd4 {
 			System.out.println(file.getName() + " requested.");
 			if (!file.exists())
 				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
-			if (HttpUtility.isGetCommand(command)) {
+			else if (HttpUtility.isGetCommand(command)) {
 				if (type == null)
 					he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 				else {

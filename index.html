@@ -1,4 +1,16 @@
-<html><body>Testing Httpd
-<p><img src="a.jpg">
-<p><img src="b.png">
+<!DOCTYPE html><body style="width:500px;margin:0 auto;text-align:center;">
+<h1>Tiny Http Server</h1>
+<table>
+<tr>
+<td>a.jpg</td><td>b.png</td>
+</tr>
+<tr>
+<td><img src="a.jpg"></td>
+<td><img src="b.png" height="25%"></td>
+</td>
+</table>
+<form method=“post” action=“http://localhost:8888/upload”>
+First name: <input type="text" name="fname"><br>
+Last name: <input type="text" name="lname"><br>
+<input type="submit" value="Submit">
 </body></html>
