@@ -1,4 +1,4 @@
-package httpd;
+package project;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -12,10 +12,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class HttpHandler implements Runnable {
+	private Httpd server;
 	private ServerSocket serverSocket;
 	private Socket client;
 	
-	public HttpHandler(ServerSocket serverSocket, Socket client) {
+	public HttpHandler(Httpd server, ServerSocket serverSocket, Socket client) {
+		this.server = server;
 		this.serverSocket = serverSocket;
 		this.client = client;
 	}
@@ -27,10 +29,12 @@ public class HttpHandler implements Runnable {
 			PrintStream out = new PrintStream( client.getOutputStream() );
 			System.out.println( "I/O setup done" );
 			try {
-				while (true) {
-					boolean done = executeCommand(new HttpExchange(client, serverSocket, in, out));
-					if (done)
-						break;
+				if (server.getAuthenticator() == null
+						|| authenticate(new HttpExchange(client, serverSocket, in, out))) {
+					while (true) {
+						if (!executeCommand(new HttpExchange(client, serverSocket, in, out)))
+							break;
+					}
 				}
 			} finally {
 				in.close();
@@ -43,10 +47,18 @@ public class HttpHandler implements Runnable {
 		}
 	}
 
+	private boolean authenticate(HttpExchange ex) {
+		if (server.getAuthenticator().authenticate(ex.getRequestHeader("Authorization")))
+			return executeCommand(ex);
+		ex.makeErrorResponse(HttpURLConnection.HTTP_UNAUTHORIZED);
+		ex.sendResponse();
+		return false;
+	}
+	
 	private boolean executeCommand( HttpExchange he) {
 		String command = he.getRequestCommand();
 		if (command == null)
-			return true;
+			return false;
 		String url = he.getRrequestURI();
 		if(!url.startsWith("/"))
 			he.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -77,9 +89,9 @@ public class HttpHandler implements Runnable {
 			he.sendResponse();
 		}
 		if (he.isPersistent())
-			return false;
-		else
 			return true;
+		else
+			return false;
 	}
 
 	private void sendFile(HttpExchange he, File file, String type){

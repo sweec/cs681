@@ -1,4 +1,4 @@
-package httpd;
+package project;
 
 public interface Queue {
 	public abstract int size();
