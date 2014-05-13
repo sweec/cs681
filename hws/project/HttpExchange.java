@@ -1,22 +1,18 @@
 package project;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
 public class HttpExchange {
 	private ServerSocket server;
 	private Socket client;
-	private BufferedReader in;
 	private PrintStream out;
 	private String[] requestLine;
 	private HashMap<String, String> requestHead;
@@ -24,47 +20,41 @@ public class HttpExchange {
 	private String responseLine;
 	private HashMap<String, String> responseHead;
 	private byte[] responseBody;
+	private int TimeOut = 30000;
 	
-	public HttpExchange(Socket client, ServerSocket server, BufferedReader in, PrintStream out) {
+	public HttpExchange(Socket client, ServerSocket server, BufferedReader in, PrintStream out) throws Exception {
 		this.server = server;
 		this.client = client;
-		this.in = in;
 		this.out = out;
-		init();
-	}
 
-	private void init() {
 		requestLine = null;
 		requestHead = new HashMap<String, String>();
 		requestBody = null;
 		responseLine = null;
 		responseHead = new HashMap<String, String>();
 		responseBody = null;
-		try {
-			client.setSoTimeout(30000);
-			String line = in.readLine();
-			requestLine = line.split("\\s+");
+		
+		client.setSoTimeout(TimeOut);
+		String line = in.readLine();
+		requestLine = line.split("\\s+");
+		System.out.println(line);
+		line = in.readLine();
+		while( line != null ) {
 			System.out.println(line);
+			if(line.equals("")) break;
+			String[] kv = line.split(":[ ]*", 2);
+			if (kv.length > 1)
+				requestHead.put(kv[0], kv[1]);
 			line = in.readLine();
-			while( line != null ) {
-				System.out.println(line);
-				if(line.equals("")) break;
-				String[] kv = line.split(":[ ]*", 2);
-				if (kv.length > 1)
-					requestHead.put(kv[0], kv[1]);
-				line = in.readLine();
-			}
-			if (getRequestCommand().equals("POST")) {
-				requestBody = in.readLine();
-				System.out.println(requestBody);
-			}
-		} catch(SocketTimeoutException exception) {
-			System.out.println("Socket read time out.");
-		} catch (SocketException e) {
-			System.out.println("Socket error");
-		} catch (IOException e) {
-			System.out.println("Read from socket error");
 		}
+		if (getRequestCommand().equals("POST")) {
+			requestBody = in.readLine();
+			System.out.println(requestBody);
+		}
+	}
+
+	public int getTimeOut() {
+		return TimeOut;
 	}
 	
 	public SocketAddress getLocalAddress() {

@@ -10,11 +10,13 @@ import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class HttpHandler implements Runnable {
 	private Httpd server;
 	private ServerSocket serverSocket;
 	private Socket client;
+	private long MaxIdleTime = 900000;
 	
 	public HttpHandler(Httpd server, ServerSocket serverSocket, Socket client) {
 		this.server = server;
@@ -41,11 +43,25 @@ public class HttpHandler implements Runnable {
 				}
 				if (!ex.isPersistent())
 					return;
+				long idleTime = 0;
 				while (true) {
-					ex = new HttpExchange(client, serverSocket, in, out);
-					executeCommand(ex);
+					try {
+						ex = new HttpExchange(client, serverSocket, in, out);
+						executeCommand(ex);
+						idleTime = 0;
+					} catch(SocketTimeoutException exception) {
+						System.out.println("Socket read time out.");
+						idleTime += ex.getTimeOut();
+						if (idleTime > MaxIdleTime) {
+							System.out.println("Session time out");
+							break;
+						}
+					} catch (Exception e) {
+						System.out.println("Something error happened");
+						break;
+					}
 					if (!ex.isPersistent())
-						return;
+						break;
 				}
 			} finally {
 				in.close();
@@ -53,7 +69,7 @@ public class HttpHandler implements Runnable {
 				client.close();
 				System.out.println( "A connection is closed." );				
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -87,8 +103,8 @@ public class HttpHandler implements Runnable {
 				ex.makeSuccessfulResponse();
 			} else
 				ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
-			ex.sendResponse();
 		}
+		ex.sendResponse();
 	}
 
 	private void sendFile(HttpExchange he, File file, String type){
