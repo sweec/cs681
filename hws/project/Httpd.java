@@ -23,6 +23,8 @@ public class Httpd {
 			else if (args[1].equals("-d"))
 				authenticator = new DigestAuthenticator();
 		}
+		if (authenticator == null)
+			authenticator = new NullAuthenticator();
 		pool = new StaticThreadPool(6, new WaitingRunnableQueue(false), false);
 	}
 	

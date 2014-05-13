@@ -1,13 +1,20 @@
 package project;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.xml.bind.DatatypeConverter;
+
 public class UserInfo {
-	private HashSet<String> users = new HashSet<String>();
+	private HashSet<String> basicUsers = new HashSet<String>();
+	private HashMap<String, String> digestUsers = new HashMap<String, String>();
 	private UserInfo(){}
-	private ReentrantReadWriteLock lockRW = new ReentrantReadWriteLock();
+	private ReentrantReadWriteLock basiclock = new ReentrantReadWriteLock();
+	private ReentrantReadWriteLock digestlock = new ReentrantReadWriteLock();
 	private static UserInfo instance = null;
 	private static ReentrantLock lock = new ReentrantLock();
 	
@@ -23,27 +30,50 @@ public class UserInfo {
 		return instance;
 	}
 	
-	public void addUser(String user) {
-		lockRW.writeLock().lock();
-		users.add(user);
-		lockRW.writeLock().unlock();
+	public void addBasicUser(String user) {
+		basiclock.writeLock().lock();
+		basicUsers.add(user);
+		basiclock.writeLock().unlock();
+	}
+	
+	public void addBasicUser(String username, String password) {
+		String user = username+":"+password;
+		addBasicUser(DatatypeConverter.printBase64Binary(user.getBytes()));
 	}
 	
 	public boolean hasBasicUser(String user) {
-		lockRW.readLock().lock();
+		basiclock.readLock().lock();
 		try {
-			return users.contains(user);
+			return basicUsers.contains(user);
 		} finally {
-			lockRW.readLock().unlock();
+			basiclock.readLock().unlock();
 		}
 	}
 	
-	public boolean hasDigestUser(String user) {
-		lockRW.readLock().lock();
+	public void addDigestUser(String username, String info) {
+		digestlock.writeLock().lock();
+		digestUsers.put(username, info);
+		digestlock.writeLock().unlock();
+	}
+	
+	public void addDigestUser(String username, String password, String realm) {
+		String info = username+":"+realm+":"+password;
+		MessageDigest md;
 		try {
-			return users.contains(user);
+			md = MessageDigest.getInstance("MD5");
+			addDigestUser(username, new String(md.digest(info.getBytes())));
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	public String getDigestUser(String username) {
+		digestlock.readLock().lock();
+		try {
+			return digestUsers.get(username);
 		} finally {
-			lockRW.readLock().unlock();
+			digestlock.readLock().unlock();
 		}
 	}
 }

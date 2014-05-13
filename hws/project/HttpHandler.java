@@ -29,12 +29,23 @@ public class HttpHandler implements Runnable {
 			PrintStream out = new PrintStream( client.getOutputStream() );
 			System.out.println( "I/O setup done" );
 			try {
-				if (server.getAuthenticator() == null
-						|| authenticate(new HttpExchange(client, serverSocket, in, out))) {
-					while (true) {
-						if (!executeCommand(new HttpExchange(client, serverSocket, in, out)))
-							break;
-					}
+				HttpExchange ex = null;
+				// authenticate
+				while (true) {
+					ex = new HttpExchange(client, serverSocket, in, out);
+					if (server.getAuthenticator().authenticate(ex)) {
+						executeCommand(ex);
+						break;
+					} else if (!ex.isPersistent())
+					 return;
+				}
+				if (!ex.isPersistent())
+					return;
+				while (true) {
+					ex = new HttpExchange(client, serverSocket, in, out);
+					executeCommand(ex);
+					if (!ex.isPersistent())
+						return;
 				}
 			} finally {
 				in.close();
@@ -47,21 +58,11 @@ public class HttpHandler implements Runnable {
 		}
 	}
 
-	private boolean authenticate(HttpExchange ex) {
-		if (server.getAuthenticator().authenticate(ex.getRequestHeader("Authorization")))
-			return executeCommand(ex);
-		ex.makeErrorResponse(HttpURLConnection.HTTP_UNAUTHORIZED);
-		ex.sendResponse();
-		return false;
-	}
-	
-	private boolean executeCommand( HttpExchange he) {
-		String command = he.getRequestCommand();
-		if (command == null)
-			return false;
-		String url = he.getRrequestURI();
-		if(!url.startsWith("/"))
-			he.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
+	private void executeCommand( HttpExchange ex) {
+		String command = ex.getRequestCommand();
+		String url = ex.getRrequestURI();
+		if (command == null || url == null || !url.startsWith("/"))
+			ex.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
 		else {
 			if (url.equals("/"))
 				url = "index.html";
@@ -71,27 +72,23 @@ public class HttpHandler implements Runnable {
 			File file = new File(url);
 			System.out.println(file.getName() + " requested.");
 			if (!file.exists())
-				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
+				ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
 			else if (HttpUtility.isGetCommand(command)) {
 				if (type == null)
-					he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+					ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 				else {
-					setResponseHeader(he, file, type);  
-					sendFile(he, file, type);
+					setResponseHeader(ex, file, type);  
+					sendFile(ex, file, type);
 				}
 			} else if (HttpUtility.isHeadCommand(command)) {
-				setResponseHeader(he, file, type);
+				setResponseHeader(ex, file, type);
 			} else if (HttpUtility.isPostCommand(command)) {
-				System.out.println(he.getRequestBody());
-				he.makeSuccessfulResponse();
+				System.out.println(ex.getRequestBody());
+				ex.makeSuccessfulResponse();
 			} else
-				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
-			he.sendResponse();
+				ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+			ex.sendResponse();
 		}
-		if (he.isPersistent())
-			return true;
-		else
-			return false;
 	}
 
 	private void sendFile(HttpExchange he, File file, String type){

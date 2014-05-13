@@ -1,30 +1,45 @@
 package project;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
 public class HttpExchange {
 	private ServerSocket server;
 	private Socket client;
+	private BufferedReader in;
 	private PrintStream out;
-	private String[] requestLine = null;
-	private HashMap<String, String> requestHead = new HashMap<String, String>();
-	private String requestBody = null;
-	private String responseLine = null;
-	private HashMap<String, String> responseHead = new HashMap<String, String>();
-	private byte[] responseBody = null;
+	private String[] requestLine;
+	private HashMap<String, String> requestHead;
+	private String requestBody;
+	private String responseLine;
+	private HashMap<String, String> responseHead;
+	private byte[] responseBody;
 	
 	public HttpExchange(Socket client, ServerSocket server, BufferedReader in, PrintStream out) {
 		this.server = server;
 		this.client = client;
+		this.in = in;
 		this.out = out;
+		init();
+	}
+
+	private void init() {
+		requestLine = null;
+		requestHead = new HashMap<String, String>();
+		requestBody = null;
+		responseLine = null;
+		responseHead = new HashMap<String, String>();
+		responseBody = null;
 		try {
 			client.setSoTimeout(30000);
 			String line = in.readLine();
@@ -43,8 +58,12 @@ public class HttpExchange {
 				requestBody = in.readLine();
 				System.out.println(requestBody);
 			}
-		} catch(Exception exception) {
+		} catch(SocketTimeoutException exception) {
 			System.out.println("Socket read time out.");
+		} catch (SocketException e) {
+			System.out.println("Socket error");
+		} catch (IOException e) {
+			System.out.println("Read from socket error");
 		}
 	}
 	
