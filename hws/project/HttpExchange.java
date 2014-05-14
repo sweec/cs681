@@ -1,6 +1,10 @@
 package project;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -36,18 +40,19 @@ public class HttpExchange {
 		
 		client.setSoTimeout(TimeOut);
 		String line = in.readLine();
-		requestLine = line.split("\\s+");
-		System.out.println(line);
-		line = in.readLine();
 		while( line != null ) {
 			System.out.println(line);
-			if(line.equals("")) break;
-			String[] kv = line.split(":[ ]*", 2);
-			if (kv.length > 1)
-				requestHead.put(kv[0], kv[1]);
+			if (requestLine == null)
+				requestLine = line.split("\\s+");
+			else {
+				if(line.equals("")) break;
+				String[] kv = line.split(":[ ]*", 2);
+				if (kv.length > 1)
+					requestHead.put(kv[0], kv[1]);
+			}
 			line = in.readLine();
 		}
-		if (getRequestCommand().equals("POST")) {
+		if ("POST".equals(getRequestCommand())) {
 			requestBody = in.readLine();
 			System.out.println(requestBody);
 		}
@@ -62,6 +67,12 @@ public class HttpExchange {
 	}
 	public InetAddress getRemoteAddress() {
 		return client.getInetAddress();
+	}
+	public int getRemotePort() {
+		return client.getPort();
+	}
+	public String getRemoteUniqueId() {
+		return getProtocolName()+"at"+getRemoteAddress();
 	}
 	public String getRequestCommand() {
 		if (requestLine == null || requestLine.length < 1)
@@ -96,12 +107,12 @@ public class HttpExchange {
 	public String getRequestBody() {
 		return requestBody;
 	}
-	public void makeSuccessfulResponse() {
-		responseLine = "HTTP/1.0 200 OK";
-	}
 	public void makeErrorResponse(int code) {
+		String status = getHttpStatus(code);
 		responseLine = "HTTP/1.0 "+code+" "+getHttpStatus(code);
+		setResponseBody(status.getBytes());
 	}
+	
 	private static final HashMap<Integer, String> httpStatus = new HashMap<Integer, String>();
 	static {
 		httpStatus.put(HttpURLConnection.HTTP_OK, "OK");
@@ -121,11 +132,50 @@ public class HttpExchange {
 	public String getResponseHeader(String key) {
 		return responseHead.get(key);
 	}
+
+	public void setSuccessResponseHeader(File file, String type) {
+		if (type == null)
+			type = "Unsupported";
+		responseLine = "HTTP/1.0 200 OK";
+		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
+		setResponseHeader("Content-Type", type);
+		setResponseHeader("Content-Length", String.valueOf((int) file.length()));
+		setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
+		setResponseHeader("Last-Modified", HttpUtility.getGMT(file.lastModified()));
+	}
+
+	public void setSuccessResponse(File file, String type){
+		setSuccessResponseHeader(file, type);
+		try{
+			int len = (int) file.length();
+			DataInputStream fin = new DataInputStream(new FileInputStream(file));
+			byte buf[] = new byte[len];
+			fin.readFully(buf);
+			setResponseBody(buf);;
+			fin.close();
+		}catch(IOException exception){
+			exception.printStackTrace();
+		}         
+	}
+	
+	public void setSuccessResponse(String content, String type){
+		if (type == null)
+			type = "Unsupported";
+		responseLine = "HTTP/1.0 200 OK";
+		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
+		setResponseHeader("Content-Type", type);
+		setResponseHeader("Content-Length", String.valueOf(content.length()));
+		setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
+		setResponseHeader("Last-Modified", HttpUtility.getGMT(System.currentTimeMillis()));
+		setResponseBody(content.getBytes());;
+	}
+	
 	public HashMap<String, String> getResponseHeaders() {
 		return responseHead;
 	}
 	public void setResponseBody(byte[] content) {
 		responseBody = content;
+		setResponseHeader("Content-Length", String.valueOf(content.length));
 	}
 	public void sendResponse() {
 		out.println(responseLine);

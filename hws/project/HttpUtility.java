@@ -1,5 +1,7 @@
 package project;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
@@ -48,5 +50,20 @@ public class HttpUtility {
 	}
 	public static String getGMT(long time) {
 		return GMT.format(time);
+	}
+
+	public static String toMD5(String message) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("MD5");
+		    byte byteData[] = md.digest(message.getBytes());
+		    StringBuffer sb = new StringBuffer();
+		    for (int i = 0; i < byteData.length; i++)
+		        sb.append(Integer.toString((byteData[i] & 0xff) + 0x100, 16).substring(1));
+			return sb.toString();
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println("failed to get MessageDigest instance");
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

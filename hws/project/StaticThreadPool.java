@@ -47,69 +47,6 @@ public final class StaticThreadPool
 		return availableThreads.size();
 	}
 
-
-	private class WaitingRunnableQueue implements Queue
-	{
-		private Vector<Runnable> runnables = new Vector<Runnable>();
-		private boolean debug;
-		private ReentrantLock queueLock;
-		private Condition runnablesAvailable;
-
-		public WaitingRunnableQueue(boolean debug)
-		{
-			this.debug = debug;
-			queueLock = new ReentrantLock();
-			runnablesAvailable = queueLock.newCondition();
-		}
-		
-		@Override
-		public int size()
-		{
-			return runnables.size();
-		}
-
-		@Override
-		public void put(Runnable obj)
-		{
-			queueLock.lock();
-			try
-			{
-				runnables.add(obj);
-				if(debug==true) System.out.println("A runnable queued.");
-				runnablesAvailable.signalAll();
-			}
-			finally
-			{
-				queueLock.unlock();
-			}
-		}
-
-		@Override
-		public Runnable get()
-		{
-			queueLock.lock();
-			try
-			{
-				while(runnables.isEmpty())
-				{
-					if(debug==true) System.out.println("Waiting for a runnable...");
-					runnablesAvailable.await();
-				}
-				if(debug==true) System.out.println("A runnable dequeued.");
-				return runnables.remove(0);
-			}
-			catch(InterruptedException ex)
-			{
-				return null;
-			}
-			finally
-			{
-				queueLock.unlock();
-			}
-		}
-	}
-
-
 	private class ThreadPoolThread extends Thread
 	{
 		private StaticThreadPool pool;

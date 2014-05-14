@@ -1,7 +1,5 @@
 package project;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.locks.ReentrantLock;
@@ -50,7 +48,7 @@ public class UserInfo {
 		}
 	}
 	
-	public void addDigestUser(String username, String info) {
+	private void addDigestUser(String username, String info) {
 		digestlock.writeLock().lock();
 		digestUsers.put(username, info);
 		digestlock.writeLock().unlock();
@@ -58,14 +56,7 @@ public class UserInfo {
 	
 	public void addDigestUser(String username, String password, String realm) {
 		String info = username+":"+realm+":"+password;
-		MessageDigest md;
-		try {
-			md = MessageDigest.getInstance("MD5");
-			addDigestUser(username, new String(md.digest(info.getBytes())));
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-
+		addDigestUser(username, HttpUtility.toMD5(info));
 	}
 	
 	public String getDigestUser(String username) {
