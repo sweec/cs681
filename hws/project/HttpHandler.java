@@ -27,37 +27,49 @@ public class HttpHandler implements Runnable {
 			BufferedReader in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
 			PrintStream out = new PrintStream( client.getOutputStream() );
 			System.out.println( "I/O setup done" );
-			//long before = System.currentTimeMillis();
 			try {
-				HttpExchange ex = null;
 				// authenticate
-				//while (true) {
-					ex = getNewHttpExchange(in, out);
-					if (ex == null) {
-						//if ((System.currentTimeMillis()-before)>MaxIdleTime)
-							//break;
-					} else if (server.getAuthenticator().authenticate(ex)) {
-						executeCommand(ex);
-						//before = System.currentTimeMillis();
-						//break;
-					} else if (!ex.isPersistent()) {
-						//break;
-					}
-				//}
-				/*if (ex == null || !ex.isPersistent())
-					return;
+				HttpExchange ex = null;
+				//int count = 0;
 				while (true) {
-					ex = getNewHttpExchange( in, out);
-					if (ex == null) {
-						//if ((System.currentTimeMillis()-before)>MaxIdleTime)
-							break;
-					} else {
-						executeCommand(ex);
-						//before = System.currentTimeMillis();
+					try {
+						ex = new HttpExchange(client, serverSocket, in, out);
+						if (server.getAuthenticator().authenticate(ex))
+							executeCommand(ex);
+						// stop if thread per resource
 						if (!ex.isPersistent())
+							return;
+						else	// otherwise go ahead
+							break;
+					} catch(SocketTimeoutException exception) {
+						System.out.println("Socket read time out.");
+						return;
+					} catch (Exception e) {
+						// nothing to read yet, try later
+						Thread.sleep(500);
+						//System.out.println("Thread "+Thread.currentThread().getId()+" "+(++count));
+					}
+				}
+				// stop if thread per resource
+				if (ex == null || !ex.isPersistent())
+					return;
+				// thread per connection only
+				long before = System.currentTimeMillis();
+				//count = 0;
+				while (true) {
+					try {
+						ex = new HttpExchange(client, serverSocket, in, out);
+						executeCommand(ex);
+						before = System.currentTimeMillis();
+					} catch (Exception e) {
+						// nothing to read yet, try later
+						Thread.sleep(500);
+						//System.out.println("Thread "+Thread.currentThread().getId()+" "+(++count));
+						// exit when session expired
+						if ((System.currentTimeMillis()-before)>HttpUtility.MaxSessionIdleTime)
 							break;
 					}
-				}*/
+				}
 			} finally {
 				in.close();
 				out.close();
@@ -69,20 +81,6 @@ public class HttpHandler implements Runnable {
 		}
 	}
 
-	private HttpExchange getNewHttpExchange(BufferedReader in, PrintStream out) {
-		HttpExchange ex = null;
-		try {
-			ex = new HttpExchange(client, serverSocket, in, out);
-		} catch(SocketTimeoutException exception) {
-			System.out.println("Socket read time out.");
-			ex = null;
-		} catch (Exception e) {
-			System.out.println("Something error happened");
-			ex = null;
-		}
-		return ex;
-	}
-	
 	private void executeCommand( HttpExchange ex) {
 		String command = ex.getRequestCommand();
 		if (HttpUtility.isPostCommand(command)) {
@@ -95,6 +93,7 @@ public class HttpHandler implements Runnable {
 		if (command == null || url == null || !url.startsWith("/")) {
 			ex.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
 			ex.sendResponse();
+			//System.out.println("hit here");
 			return;
 		}
 		if (url.equals("/"))

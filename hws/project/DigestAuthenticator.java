@@ -10,7 +10,6 @@ public class DigestAuthenticator implements Authenticator {
 	private HashMap<String, String> nonces = new HashMap<String, String>();
 	private HashMap<String, Long> time = new HashMap<String, Long>();
 	private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-	private long MaxIdleTime = 900000;
 	
 	@Override
 	public boolean authenticate(HttpExchange ex) {
@@ -20,7 +19,7 @@ public class DigestAuthenticator implements Authenticator {
 		String nonce = nonces.get(client);
 		Long before = time.get(client);
 		lock.readLock().unlock();
-		if (before != null && (System.currentTimeMillis()-before) > MaxIdleTime)
+		if (before != null && (System.currentTimeMillis()-before) > HttpUtility.MaxSessionIdleTime)
 			nonce = null;
 		if (nonce != null && digestInfo != null && digestInfo.startsWith("Digest ")) {
 			do {

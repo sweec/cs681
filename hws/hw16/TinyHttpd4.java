@@ -54,9 +54,17 @@ public class TinyHttpd4 {
 				System.out.println( "I/O setup done" );
 				try {
 					while (true) {
-						boolean done = executeCommand(new HttpExchange(client, serverSocket, in, out));
-						if (done)
-							break;
+						try {
+							boolean done = executeCommand(new HttpExchange(client, serverSocket, in, out));
+							if (done)
+								break;
+						} catch (Exception e) {
+							try {
+								Thread.sleep(100);
+							} catch (InterruptedException e1) {
+								e1.printStackTrace();
+							}
+						}
 					}
 				} finally {
 					in.close();

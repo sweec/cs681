@@ -40,16 +40,14 @@ public class HttpExchange {
 		
 		client.setSoTimeout(TimeOut);
 		String line = in.readLine();
+		requestLine = line.split("\\s+");
+		System.out.println(line);
+		line = in.readLine();
 		while( line != null ) {
-			System.out.println(line);
-			if (requestLine == null)
-				requestLine = line.split("\\s+");
-			else {
-				if(line.equals("")) break;
-				String[] kv = line.split(":[ ]*", 2);
-				if (kv.length > 1)
-					requestHead.put(kv[0], kv[1]);
-			}
+			if(line.equals("")) break;
+			String[] kv = line.split(":[ ]*", 2);
+			if (kv.length > 1)
+				requestHead.put(kv[0], kv[1]);
 			line = in.readLine();
 		}
 		if ("POST".equals(getRequestCommand())) {

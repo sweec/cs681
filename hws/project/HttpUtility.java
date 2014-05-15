@@ -15,6 +15,8 @@ public class HttpUtility {
 	static Pattern jpgP = Pattern.compile(".*jpg$");
 	static Pattern pngP = Pattern.compile(".*png$");
 	
+	static int MaxSessionIdleTime = 900000;
+	
 	public static boolean isGetCommand(String command) {
 		if (command != null && getP.matcher(command).matches())
 			return true;

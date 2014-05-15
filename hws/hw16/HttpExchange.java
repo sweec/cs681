@@ -21,30 +21,26 @@ public class HttpExchange {
 	private HashMap<String, String> responseHead = new HashMap<String, String>();
 	private byte[] responseBody = null;
 	
-	public HttpExchange(Socket client, ServerSocket server, BufferedReader in, PrintStream out) {
+	public HttpExchange(Socket client, ServerSocket server, BufferedReader in, PrintStream out) throws Exception {
 		this.server = server;
 		this.client = client;
 		this.out = out;
-		try {
-			client.setSoTimeout(30000);
-			String line = in.readLine();
-			requestLine = line.split("\\s+");
+		client.setSoTimeout(30000);
+		String line = in.readLine();
+		requestLine = line.split("\\s+");
+		System.out.println(line);
+		line = in.readLine();
+		while( line != null ) {
 			System.out.println(line);
+			if(line.equals("")) break;
+			String[] kv = line.split(":[ ]*", 2);
+			if (kv.length > 1)
+				requestHead.put(kv[0], kv[1]);
 			line = in.readLine();
-			while( line != null ) {
-				System.out.println(line);
-				if(line.equals("")) break;
-				String[] kv = line.split(":[ ]*", 2);
-				if (kv.length > 1)
-					requestHead.put(kv[0], kv[1]);
-				line = in.readLine();
-			}
-			if (getRequestCommand().equals("POST")) {
-				requestBody = in.readLine();
-				System.out.println(requestBody);
-			}
-		} catch(Exception exception) {
-			System.out.println("Socket read time out.");
+		}
+		if (getRequestCommand().equals("POST")) {
+			requestBody = in.readLine();
+			System.out.println(requestBody);
 		}
 	}
 	
