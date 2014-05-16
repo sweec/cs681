@@ -14,7 +14,7 @@ public class BasicAuthenticator implements Authenticator {
 			if (UserInfo.getInstance().hasBasicUser(user))
 				return true;
 		}
-		ex.makeErrorResponse(HttpURLConnection.HTTP_UNAUTHORIZED);
+		ex.setErrorResponse(HttpURLConnection.HTTP_UNAUTHORIZED);
 		ex.setResponseHeader("WWW-Authenticate", "Basic realm=\""+realm+"\"");
 		ex.sendResponse();
 		return false;

@@ -1,7 +1,6 @@
 package project;
 
 import java.util.Vector;
-import java.util.concurrent.locks.*;
 
 public final class StaticThreadPool
 {

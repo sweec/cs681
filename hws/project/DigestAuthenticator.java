@@ -46,6 +46,7 @@ public class DigestAuthenticator implements Authenticator {
 				} else
 					HAResponse = HttpUtility.toMD5(HA1+":"+nonce+":"+requestNc+":"+requestCnonce+":"+requestQop+":"+HA2);
 				if (!requestResponse.equals(HAResponse)) break;
+				time.put(client, System.currentTimeMillis());
 				return true;
 			} while (true);
 		}
@@ -61,7 +62,7 @@ public class DigestAuthenticator implements Authenticator {
 		response.setResponseInfo("nonce", nonce);
 		response.setResponseInfo("realm", realm);
 		response.setResponseInfo("qop", "auth");
-		ex.makeErrorResponse(HttpURLConnection.HTTP_UNAUTHORIZED);
+		ex.setErrorResponse(HttpURLConnection.HTTP_UNAUTHORIZED);
 		ex.setResponseHeader("Server", "Java server");
 		ex.setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
 		ex.setResponseHeader("WWW-Authenticate", response.getResponseInfo());

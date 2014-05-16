@@ -13,7 +13,6 @@ public class HttpHandler implements Runnable {
 	private Httpd server;
 	private ServerSocket serverSocket;
 	private Socket client;
-	//private long MaxIdleTime = 900000;
 	
 	public HttpHandler(Httpd server, ServerSocket serverSocket, Socket client) {
 		this.server = server;
@@ -23,51 +22,30 @@ public class HttpHandler implements Runnable {
 
 	@Override
 	public void run() {
+		System.out.println("Thread "+Thread.currentThread().getId()+" run");
 		try {
 			BufferedReader in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
 			PrintStream out = new PrintStream( client.getOutputStream() );
 			System.out.println( "I/O setup done" );
 			try {
-				// authenticate
 				HttpExchange ex = null;
-				//int count = 0;
-				while (true) {
+				while (!client.isClosed()) {
 					try {
 						ex = new HttpExchange(client, serverSocket, in, out);
-						if (server.getAuthenticator().authenticate(ex))
+						if (server.getAuthenticator().authenticate(ex)) {
 							executeCommand(ex);
+							System.out.println("Thread "+Thread.currentThread().getId()+" execute command");
+						}
 						// stop if thread per resource
 						if (!ex.isPersistent())
 							return;
-						else	// otherwise go ahead
-							break;
 					} catch(SocketTimeoutException exception) {
 						System.out.println("Socket read time out.");
 						return;
 					} catch (Exception e) {
 						// nothing to read yet, try later
+						//System.out.println("Thread "+Thread.currentThread().getId()+" failed read");
 						Thread.sleep(500);
-						//System.out.println("Thread "+Thread.currentThread().getId()+" "+(++count));
-					}
-				}
-				// stop if thread per resource
-				if (ex == null || !ex.isPersistent())
-					return;
-				// thread per connection only
-				long before = System.currentTimeMillis();
-				//count = 0;
-				while (true) {
-					try {
-						ex = new HttpExchange(client, serverSocket, in, out);
-						executeCommand(ex);
-						before = System.currentTimeMillis();
-					} catch (Exception e) {
-						// nothing to read yet, try later
-						Thread.sleep(500);
-						//System.out.println("Thread "+Thread.currentThread().getId()+" "+(++count));
-						// exit when session expired
-						if ((System.currentTimeMillis()-before)>HttpUtility.MaxSessionIdleTime)
-							break;
 					}
 				}
 			} finally {
@@ -91,7 +69,7 @@ public class HttpHandler implements Runnable {
 		}
 		String url = ex.getRrequestURI();
 		if (command == null || url == null || !url.startsWith("/")) {
-			ex.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
+			ex.setErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
 			ex.sendResponse();
 			//System.out.println("hit here");
 			return;
@@ -111,17 +89,17 @@ public class HttpHandler implements Runnable {
 		File file = new File(url);
 		System.out.println(file.getName() + " requested.");
 		if (!file.exists()) {
-			ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
+			ex.setErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
 		} else if (HttpUtility.isGetCommand(command)) {
 			if (type == null)
-				ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+				ex.setErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 			else {
 				ex.setSuccessResponse(file, type);
 			}
 		} else if (HttpUtility.isHeadCommand(command)) {
 			ex.setSuccessResponseHeader(file, type);
 		} else
-			ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+			ex.setErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 		ex.sendResponse();
 	}
 }

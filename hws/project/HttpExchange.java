@@ -105,9 +105,10 @@ public class HttpExchange {
 	public String getRequestBody() {
 		return requestBody;
 	}
-	public void makeErrorResponse(int code) {
+	public void setErrorResponse(int code) {
 		String status = getHttpStatus(code);
 		responseLine = "HTTP/1.0 "+code+" "+getHttpStatus(code);
+		setResponseHeader("Connection","Keep-Alive");
 		setResponseBody(status.getBytes());
 	}
 	
@@ -131,17 +132,27 @@ public class HttpExchange {
 		return responseHead.get(key);
 	}
 
-	public void setSuccessResponseHeader(File file, String type) {
+	private void setSuccessResponseHeader(String type, long length, String lastDate) {
 		if (type == null)
 			type = "Unsupported";
 		responseLine = "HTTP/1.0 200 OK";
+		setResponseHeader("Connection","Keep-Alive");
 		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
 		setResponseHeader("Content-Type", type);
-		setResponseHeader("Content-Length", String.valueOf((int) file.length()));
+		setResponseHeader("Content-Length", String.valueOf(length));
+		setResponseHeader("Last-Modified", lastDate);
 		setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
-		setResponseHeader("Last-Modified", HttpUtility.getGMT(file.lastModified()));
+	}
+	
+	public void setSuccessResponseHeader(File file, String type) {
+		setSuccessResponseHeader(type, file.length(), HttpUtility.getGMT(file.lastModified()));
 	}
 
+	public void setSuccessResponse(String content, String type){
+		setSuccessResponseHeader(type, content.length(), HttpUtility.getGMT(System.currentTimeMillis()));
+		setResponseBody(content.getBytes());;
+	}
+	
 	public void setSuccessResponse(File file, String type){
 		setSuccessResponseHeader(file, type);
 		try{
@@ -154,18 +165,6 @@ public class HttpExchange {
 		}catch(IOException exception){
 			exception.printStackTrace();
 		}         
-	}
-	
-	public void setSuccessResponse(String content, String type){
-		if (type == null)
-			type = "Unsupported";
-		responseLine = "HTTP/1.0 200 OK";
-		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
-		setResponseHeader("Content-Type", type);
-		setResponseHeader("Content-Length", String.valueOf(content.length()));
-		setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
-		setResponseHeader("Last-Modified", HttpUtility.getGMT(System.currentTimeMillis()));
-		setResponseBody(content.getBytes());;
 	}
 	
 	public HashMap<String, String> getResponseHeaders() {
@@ -193,7 +192,7 @@ public class HttpExchange {
 		if (version == null || !version.equals("1.0"))
 			return true;
 		String conn = getRequestHeader("Connection");
-		if (conn == null || !conn.equalsIgnoreCase("keep-alive"))
+		if (conn == null || !conn.equalsIgnoreCase("Keep-Alive"))
 			return false;
 		return true;
 	}
