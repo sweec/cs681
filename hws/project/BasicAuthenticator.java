@@ -7,11 +7,18 @@ public class BasicAuthenticator implements Authenticator {
 
 	@Override
 	public boolean authenticate(HttpExchange ex) {
+		String url = ex.getRrequestURI();
+		if (url == null)
+			return true;
+		AppInfo app = AppInfo.getInstance();
+		String group = app.getProperty(url);
+		if (group == null)
+			return true;
 		String basicUser = ex.getRequestHeader("Authorization");
-		String user = null;
+		String info = null;
 		if (basicUser != null && basicUser.startsWith("Basic ")) {
-			user = basicUser.split(" ")[1];
-			if (UserInfo.getInstance().hasBasicUser(user))
+			info = basicUser.split(" ")[1];
+			if (app.hasGroupUser(group, app.getBasicUser(info)))
 				return true;
 		}
 		ex.setErrorResponse(HttpURLConnection.HTTP_UNAUTHORIZED);

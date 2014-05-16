@@ -9,9 +9,19 @@ public class WaitingRunnableQueue implements Queue {
 	private ReentrantLock queueLock = new ReentrantLock();
 	private Condition runnablesAvailable = queueLock.newCondition();
 	private boolean debug;
+	private volatile boolean done = false;
 
 	public WaitingRunnableQueue(boolean debug) {
 		this.debug = debug;
+	}
+	
+	@Override
+	public void clear() {
+		done = true;
+		queueLock.lock();
+		runnables.clear();
+		runnablesAvailable.signalAll();
+		queueLock.unlock();
 	}
 	
 	@Override
@@ -23,6 +33,7 @@ public class WaitingRunnableQueue implements Queue {
 	@Override
 	public void put(Runnable obj)
 	{
+		if (done) return;
 		queueLock.lock();
 		try
 		{
@@ -42,10 +53,14 @@ public class WaitingRunnableQueue implements Queue {
 		queueLock.lock();
 		try
 		{
-			while(runnables.isEmpty())
+			while(!done && runnables.isEmpty())
 			{
 				if (debug) System.out.println("Waiting for a runnable...");
 				runnablesAvailable.await();
+			}
+			if (done) {
+				runnablesAvailable.signalAll();
+				return null;
 			}
 			if (debug) System.out.println("A runnable dequeued.");
 			return runnables.remove(0);

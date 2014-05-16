@@ -2,17 +2,20 @@ package project;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
-public class HttpHandler implements Runnable {
+public class HttpHandler implements StoppableRunnable {
 	private Httpd server;
 	private ServerSocket serverSocket;
 	private Socket client;
+	private volatile boolean done = false;
 	
 	public HttpHandler(Httpd server, ServerSocket serverSocket, Socket client) {
 		this.server = server;
@@ -21,31 +24,48 @@ public class HttpHandler implements Runnable {
 	}
 
 	@Override
+	public void stop() {
+		done = true;
+		try {
+			client.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
 	public void run() {
-		System.out.println("Thread "+Thread.currentThread().getId()+" run");
+		System.out.println("Thread "+Thread.currentThread().getId()+" start");
 		try {
 			BufferedReader in = new BufferedReader( new InputStreamReader( client.getInputStream() ) );  
 			PrintStream out = new PrintStream( client.getOutputStream() );
 			System.out.println( "I/O setup done" );
 			try {
-				HttpExchange ex = null;
-				while (!client.isClosed()) {
+				while (!done) {
 					try {
-						ex = new HttpExchange(client, serverSocket, in, out);
+						HttpExchange ex = new HttpExchange(client, serverSocket, in, out);
 						if (server.getAuthenticator().authenticate(ex)) {
 							executeCommand(ex);
-							System.out.println("Thread "+Thread.currentThread().getId()+" execute command");
+							//System.out.println("Thread "+Thread.currentThread().getId()+" execute command");
 						}
 						// stop if thread per resource
 						if (!ex.isPersistent())
-							return;
+							break;
 					} catch(SocketTimeoutException exception) {
-						System.out.println("Socket read time out.");
-						return;
-					} catch (Exception e) {
+						System.out.println("Client read time out.");
+						break;
+					} catch (SocketException e) {
+						System.out.println("Thread "+Thread.currentThread().getId()+": Interrupted, stop.");
+						break;
+					} catch (NullPointerException e) {
 						// nothing to read yet, try later
-						//System.out.println("Thread "+Thread.currentThread().getId()+" failed read");
-						Thread.sleep(500);
+						if (done) break;
+						try {
+							Thread.sleep(500);
+						} catch (InterruptedException e1) {
+							System.out.println("Thread "+Thread.currentThread().getId()+": Interrupted, stop.");
+							break;
+						}
 					}
 				}
 			} finally {
@@ -78,9 +98,14 @@ public class HttpHandler implements Runnable {
 			url = "index.html";
 		else
 			url = url.substring(1);
+		if (url.equals("site/admin/stop.html")) {
+			ex.setSuccessResponse("<html><body><p>Server is stopped.</p></body></html>", "text/html");
+			ex.sendResponse();
+			server.setDone();
+			return;
+		}
 		// somehow my browser turns post request into get with parameters
-		if (HttpUtility.isGetCommand(command)
-				&& (url.contains("?") || url.contains("="))) {
+		if (HttpUtility.isGetCommand(command) && url.contains("?")) {
 			ex.setSuccessResponse("<html><body>Get converted from Post: <p>"+url.substring(url.indexOf("?")+1)+"</p></body></html>", "text/html");
 			ex.sendResponse();
 			return;

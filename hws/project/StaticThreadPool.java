@@ -26,9 +26,10 @@ public final class StaticThreadPool
 
 	public void shutdown() {
 		for(ThreadPoolThread th:availableThreads) {
-			th.setStopped(true);
+			th.setDone();
 			th.interrupt();
 		}
+		queue.clear();
 	}
 	
 	public void execute(Runnable runnable)
@@ -51,7 +52,8 @@ public final class StaticThreadPool
 		private StaticThreadPool pool;
 		private Queue queue;
 		private int id;
-		private volatile boolean stopped = false;
+		private volatile boolean done = false;
+		private Runnable runnable = null;
 
 		public ThreadPoolThread(StaticThreadPool pool, Queue queue, int id)
 		{
@@ -60,16 +62,23 @@ public final class StaticThreadPool
 			this.id = id;
 		}
 
-		public void setStopped(boolean stopped) {
-			this.stopped = stopped;
+		public void setDone() {
+			this.done = true;
+			StoppableRunnable r = null;
+			if (runnable instanceof StoppableRunnable)
+				r = (StoppableRunnable)runnable;
+			if (r != null)
+				r.stop();
 		}
 		
 		public void run()
 		{
 			if(pool.debug==true) System.out.println("Thread " + id + " starts.");
-			while(!stopped)
+			while(!done)
 			{
-				Runnable runnable = queue.get();
+				runnable = queue.get();
+				if (done)
+					break;
 				if(runnable==null)
 				{
 					if(pool.debug==true)

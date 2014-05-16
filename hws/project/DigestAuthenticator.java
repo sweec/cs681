@@ -13,6 +13,13 @@ public class DigestAuthenticator implements Authenticator {
 	
 	@Override
 	public boolean authenticate(HttpExchange ex) {
+		String url = ex.getRrequestURI();
+		if (url == null)
+			return true;
+		AppInfo app = AppInfo.getInstance();
+		String group = app.getProperty(url);
+		if (group == null)
+			return true;
 		String digestInfo = ex.getRequestHeader("Authorization");
 		String client = ex.getRemoteUniqueId();
 		lock.readLock().lock();
@@ -26,6 +33,7 @@ public class DigestAuthenticator implements Authenticator {
 				DigestRequest request = new DigestRequest(digestInfo.split(" ", 2)[1].trim());
 				String username = request.getRequestInfo("username");
 				if (username == null) break;
+				if (!app.hasGroupUser(group, username)) break;
 				String requestRealm = request.getRequestInfo("realm");
 				if (!realm.equals(requestRealm)) break;
 				String requestNonce = request.getRequestInfo("nonce");
@@ -37,7 +45,7 @@ public class DigestAuthenticator implements Authenticator {
 				String requestResponse = request.getRequestInfo("response");
 				if (requestResponse == null) break;
 				String requestQop = request.getRequestInfo("qop");
-				String HA1 = UserInfo.getInstance().getDigestUser(username);
+				String HA1 = AppInfo.getInstance().getDigestUser(username);
 				if (HA1 == null) break;
 				String HA2 = HttpUtility.toMD5(ex.getRequestCommand()+":"+ex.getRrequestURI());
 				String HAResponse = null;
