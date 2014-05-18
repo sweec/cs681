@@ -1,5 +1,5 @@
 package project;
 
 public interface FileCache {
-	public abstract String fetch(String targetFile);
+	public abstract byte[] fetch(String targetFile);
 }

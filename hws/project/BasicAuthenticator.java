@@ -7,7 +7,7 @@ public class BasicAuthenticator implements Authenticator {
 
 	@Override
 	public boolean authenticate(HttpExchange ex) {
-		String url = ex.getRrequestURI();
+		String url = ex.getRequestURI();
 		if (url == null)
 			return true;
 		AppInfo app = AppInfo.getInstance();
@@ -27,4 +27,8 @@ public class BasicAuthenticator implements Authenticator {
 		return false;
 	}
 
+	@Override
+	public String toString() {
+		return "Basic";
+	}
 }

@@ -13,7 +13,7 @@ public class DigestAuthenticator implements Authenticator {
 	
 	@Override
 	public boolean authenticate(HttpExchange ex) {
-		String url = ex.getRrequestURI();
+		String url = ex.getRequestURI();
 		if (url == null)
 			return true;
 		AppInfo app = AppInfo.getInstance();
@@ -47,7 +47,7 @@ public class DigestAuthenticator implements Authenticator {
 				String requestQop = request.getRequestInfo("qop");
 				String HA1 = AppInfo.getInstance().getDigestUser(username);
 				if (HA1 == null) break;
-				String HA2 = HttpUtility.toMD5(ex.getRequestCommand()+":"+ex.getRrequestURI());
+				String HA2 = HttpUtility.toMD5(ex.getRequestCommand()+":"+ex.getRequestURI());
 				String HAResponse = null;
 				if (requestQop == null || !requestQop.equals("auth")) {
 					HAResponse = HttpUtility.toMD5(HA1+":"+nonce+":"+HA2);
@@ -76,6 +76,12 @@ public class DigestAuthenticator implements Authenticator {
 		ex.setResponseHeader("WWW-Authenticate", response.getResponseInfo());
 		ex.sendResponse();
 		return false;
+	}
+
+	
+	@Override
+	public String toString() {
+		return "Digest";
 	}
 
 	private class DigestRequest {

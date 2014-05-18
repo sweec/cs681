@@ -7,4 +7,8 @@ public class NullAuthenticator implements Authenticator {
 		return true;
 	}
 
+	@Override
+	public String toString() {
+		return "None";
+	}
 }

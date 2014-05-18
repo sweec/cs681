@@ -1,10 +1,6 @@
 package project;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -45,14 +41,20 @@ public class HttpExchange {
 		line = in.readLine();
 		while( line != null ) {
 			if(line.equals("")) break;
+			System.out.println(line);
 			String[] kv = line.split(":[ ]*", 2);
 			if (kv.length > 1)
 				requestHead.put(kv[0], kv[1]);
 			line = in.readLine();
 		}
 		if ("POST".equals(getRequestCommand())) {
-			requestBody = in.readLine();
-			System.out.println(requestBody);
+			Integer len = Integer.parseInt(getRequestHeader("Content-Length"));
+			if (len != null) {
+				char[] buf = new char[len];
+				in.read(buf);
+				requestBody = String.valueOf(buf);
+				System.out.println(requestBody);
+			}
 		}
 	}
 
@@ -77,7 +79,7 @@ public class HttpExchange {
 			return null;
 		return requestLine[0];
 	}
-	public String getRrequestURI() {
+	public String getRequestURI() {
 		if (requestLine == null || requestLine.length < 2)
 			return null;
 		return requestLine[1];
@@ -108,8 +110,11 @@ public class HttpExchange {
 	public void setErrorResponse(int code) {
 		String status = getHttpStatus(code);
 		responseLine = "HTTP/1.0 "+code+" "+getHttpStatus(code);
+		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
 		setResponseHeader("Connection","Keep-Alive");
-		setResponseBody(status.getBytes());
+		setResponseHeader("Content-Length", String.valueOf(status.length()));
+		setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
+		responseBody = status.getBytes();
 	}
 	
 	private static final HashMap<Integer, String> httpStatus = new HashMap<Integer, String>();
@@ -132,7 +137,7 @@ public class HttpExchange {
 		return responseHead.get(key);
 	}
 
-	private void setSuccessResponseHeader(String type, long length, String lastDate) {
+	public void setSuccessResponseHeader(String type, long length, long lastDate) {
 		if (type == null)
 			type = "Unsupported";
 		responseLine = "HTTP/1.0 200 OK";
@@ -140,40 +145,35 @@ public class HttpExchange {
 		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
 		setResponseHeader("Content-Type", type);
 		setResponseHeader("Content-Length", String.valueOf(length));
-		setResponseHeader("Last-Modified", lastDate);
+		setResponseHeader("Last-Modified", HttpUtility.getGMT(lastDate));
 		setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
+		AccessCounter.getInstance().increment(getRequestURI());
 	}
 	
-	public void setSuccessResponseHeader(File file, String type) {
-		setSuccessResponseHeader(type, file.length(), HttpUtility.getGMT(file.lastModified()));
+	public void setSuccessResponse(byte[] content, String type){
+		setSuccessResponseHeader(type, content.length, System.currentTimeMillis());
+		responseBody = content;;
 	}
-
+	
+	public void setSuccessResponse(byte[] content, String type, long lastDate){
+		setSuccessResponseHeader(type, content.length, lastDate);
+		responseBody = content;;
+	}
+	
 	public void setSuccessResponse(String content, String type){
-		setSuccessResponseHeader(type, content.length(), HttpUtility.getGMT(System.currentTimeMillis()));
-		setResponseBody(content.getBytes());;
+		setSuccessResponseHeader(type, content.length(), System.currentTimeMillis());
+		responseBody = content.getBytes();;
 	}
 	
-	public void setSuccessResponse(File file, String type){
-		setSuccessResponseHeader(file, type);
-		try{
-			int len = (int) file.length();
-			DataInputStream fin = new DataInputStream(new FileInputStream(file));
-			byte buf[] = new byte[len];
-			fin.readFully(buf);
-			setResponseBody(buf);;
-			fin.close();
-		}catch(IOException exception){
-			exception.printStackTrace();
-		}         
+	public void setSuccessResponse(String content, String type, long lastDate){
+		setSuccessResponseHeader(type, content.length(), lastDate);
+		responseBody = content.getBytes();;
 	}
 	
 	public HashMap<String, String> getResponseHeaders() {
 		return responseHead;
 	}
-	public void setResponseBody(byte[] content) {
-		responseBody = content;
-		setResponseHeader("Content-Length", String.valueOf(content.length));
-	}
+
 	public void sendResponse() {
 		out.println(responseLine);
 		for (Entry<String, String> e:responseHead.entrySet())

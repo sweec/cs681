@@ -1,11 +1,13 @@
 package project;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class AccessCounter {
-	private HashMap<String, Integer> map = new HashMap<String, Integer>();
+	private HashMap<String, Integer> counts = new HashMap<String, Integer>();
+	private HashMap<String, Long> ages = new HashMap<String, Long>();
 	private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 	private boolean debug = false;
 	private static AccessCounter instance = null;
@@ -24,17 +26,18 @@ public class AccessCounter {
 	
 	public void increment(String path) {
 		lock.writeLock().lock();
-		Integer count = map.get(path);
+		Integer count = counts.get(path);
 		if (count == null)
-			map.put(path, 1);
+			counts.put(path, 1);
 		else
-			map.put(path, count+1);
+			counts.put(path, count+1);
+		ages.put(path, System.currentTimeMillis());
 		lock.writeLock().unlock();
 	}
 	
 	public int getCount(String path) {
 		lock.readLock().lock();
-		Integer count = map.get(path);
+		Integer count = counts.get(path);
 		if (count == null)
 			count = 0;
 		if (debug)
@@ -42,6 +45,25 @@ public class AccessCounter {
 					+ count + " times");
 		lock.readLock().unlock();
 		return count;
+	}
+	
+	public long getAge(String path) {
+		lock.readLock().lock();
+		Long age = ages.get(path);
+		if (age == null)
+			age = System.currentTimeMillis();
+		lock.readLock().unlock();
+		return age;
+	}
+	
+	public void summary(ArrayList<String> paths, ArrayList<Integer> cs, ArrayList<String> ts) {
+		lock.readLock().lock();
+		for (String key:counts.keySet()) {
+			paths.add(key);
+			cs.add(counts.get(key));
+			ts.add(HttpUtility.getGMT(ages.get(key)));
+		}
+		lock.readLock().unlock();
 	}
 	
 	public static void main(String[] args) {
