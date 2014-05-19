@@ -39,7 +39,7 @@ public class ThreadSafeBankAccountSolution2
 					" (d): new balance: " + balance);
 			sufficientFundsCondition.signalAll();
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			System.out.println("Interrupted, stop.");
 		} finally {
 			lock.unlock();
 			System.out.println("Lock released");
@@ -69,7 +69,7 @@ public class ThreadSafeBankAccountSolution2
 		}
 		catch (InterruptedException exception)
 		{
-			exception.printStackTrace();
+			System.out.println("Interrupted, stop.");
 		}
 		finally
 		{

@@ -20,7 +20,6 @@ public class HttpExchange {
 	private String responseLine;
 	private HashMap<String, String> responseHead;
 	private byte[] responseBody;
-	private int TimeOut = 30000;
 	
 	public HttpExchange(Socket client, ServerSocket server, BufferedReader in, PrintStream out) throws Exception {
 		this.server = server;
@@ -34,7 +33,7 @@ public class HttpExchange {
 		responseHead = new HashMap<String, String>();
 		responseBody = null;
 		
-		client.setSoTimeout(TimeOut);
+		client.setSoTimeout(HttpUtility.SocketTimeOut);
 		String line = in.readLine();
 		requestLine = line.split("\\s+");
 		System.out.println(line);
@@ -58,10 +57,6 @@ public class HttpExchange {
 		}
 	}
 
-	public int getTimeOut() {
-		return TimeOut;
-	}
-	
 	public SocketAddress getLocalAddress() {
 		return server.getLocalSocketAddress();
 	}
@@ -109,7 +104,7 @@ public class HttpExchange {
 	}
 	public void setErrorResponse(int code) {
 		String status = getHttpStatus(code);
-		responseLine = "HTTP/1.0 "+code+" "+getHttpStatus(code);
+		responseLine = "HTTP/1.0 "+code+" "+status;
 		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
 		setResponseHeader("Connection","Keep-Alive");
 		setResponseHeader("Content-Length", String.valueOf(status.length()));

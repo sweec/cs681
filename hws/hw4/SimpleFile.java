@@ -31,7 +31,16 @@ public class SimpleFile {
 	
 	public static void main(String[] args) {
 		SimpleFile file = new SimpleFile();
-		new Thread(new SimpleEditor(file)).start();
-		new Thread(new AutoSaver(file)).start();
+		Thread editor = new Thread(new SimpleEditor(file));
+		editor.start();
+		Thread saver = new Thread(new AutoSaver(file));
+		saver.start();
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		editor.interrupt();
+		saver.interrupt();
 	}
 }

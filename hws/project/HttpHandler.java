@@ -2,7 +2,6 @@ package project;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
@@ -12,11 +11,10 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 
-public class HttpHandler implements StoppableRunnable {
+public class HttpHandler implements Runnable {
 	private Httpd server;
 	private ServerSocket serverSocket;
 	private Socket client;
-	private volatile boolean done = false;
 	
 	public HttpHandler(Httpd server, ServerSocket serverSocket, Socket client) {
 		this.server = server;
@@ -25,16 +23,6 @@ public class HttpHandler implements StoppableRunnable {
 	}
 
 	@Override
-	public void stop() {
-		done = true;
-		try {
-			client.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	@Override
 	public void run() {
 		System.out.println("Thread "+Thread.currentThread().getId()+" start");
 		try {
@@ -42,12 +30,13 @@ public class HttpHandler implements StoppableRunnable {
 			PrintStream out = new PrintStream( client.getOutputStream() );
 			System.out.println( "I/O setup done" );
 			try {
-				while (!done) {
+				long before = System.currentTimeMillis();
+				while (true) {
 					try {
 						HttpExchange ex = new HttpExchange(client, serverSocket, in, out);
 						if (server.getAuthenticator().authenticate(ex)) {
 							executeCommand(ex);
-							//System.out.println("Thread "+Thread.currentThread().getId()+" execute command");
+							before = System.currentTimeMillis();
 						}
 						// stop if thread per resource
 						if (!ex.isPersistent())
@@ -59,8 +48,12 @@ public class HttpHandler implements StoppableRunnable {
 						System.out.println("Thread "+Thread.currentThread().getId()+": Interrupted, stop.");
 						break;
 					} catch (NullPointerException e) {
+						long current = System.currentTimeMillis();
+						if (current-before>HttpUtility.SocketTimeOut) {
+							System.out.println("Client read time out.");
+							break;
+						}
 						// nothing to read yet, try later
-						if (done) break;
 						try {
 							Thread.sleep(500);
 						} catch (InterruptedException e1) {

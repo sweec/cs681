@@ -53,7 +53,7 @@ public final class StaticThreadPool
 		private Queue queue;
 		private int id;
 		private volatile boolean done = false;
-		private Runnable runnable = null;
+		//private Runnable runnable = null;
 
 		public ThreadPoolThread(StaticThreadPool pool, Queue queue, int id)
 		{
@@ -64,11 +64,6 @@ public final class StaticThreadPool
 
 		public void setDone() {
 			this.done = true;
-			StoppableRunnable r = null;
-			if (runnable instanceof StoppableRunnable)
-				r = (StoppableRunnable)runnable;
-			if (r != null)
-				r.stop();
 		}
 		
 		public void run()
@@ -76,7 +71,7 @@ public final class StaticThreadPool
 			if(pool.debug==true) System.out.println("Thread " + id + " starts.");
 			while(!done)
 			{
-				runnable = queue.get();
+				Runnable runnable = queue.get();
 				if (done)
 					break;
 				if(runnable==null)

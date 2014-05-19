@@ -2,6 +2,8 @@ package hw15;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.Random;
 import java.util.Scanner;
 import java.io.PrintWriter;
 import java.io.IOException;
@@ -36,9 +38,9 @@ public class BankServer
 										socket.getInetAddress().toString() );
 					new Thread( new Worker(socket) ).start();
 				}
-			}
-			finally
-			{
+			} catch (SocketException e) {
+				System.out.println("Interrupted, stop.");
+			} finally {
 				serverSocket.close();
 			}
 		}
@@ -127,9 +129,61 @@ public class BankServer
 		out.flush();
 	}
 	
-	public static void main(String[] args)
-	{
-		BankServer server = new BankServer();
-		server.init();
+	public static void main(String[] args) {
+		final BankServer server = new BankServer();
+		
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				server.init();
+			}
+		}).start();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					Thread.sleep(3100);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				try {
+					server.serverSocket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}).start();
+		for (int i=0;i<3;i++)
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				Random g = new Random();
+				String serverip = "localhost";
+				BankClient client = new BankClient();
+				client.init(serverip);
+				for (int i=0;i<10;i++) {
+					client.sendCommand( "BALANCE\n" );
+					System.out.println( client.getResponse() );
+
+					client.sendCommand( "DEPOSIT 100\n" );
+					System.out.println( client.getResponse() );
+
+					client.sendCommand( "WITHDRAW 90\n" );
+					System.out.println( client.getResponse() );
+					try {
+						Thread.sleep(g.nextInt(100));
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				
+				client.sendCommand( "QUIT\n" );
+			}
+			
+		}).start();
 	}
 }

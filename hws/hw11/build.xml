@@ -1,0 +1,74 @@
+<project name="hw11" basedir="." default="main">
+
+    <property name="src.dir"     value="."/>
+
+    <property name="build.dir"   value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="jar.dir"     value="${build.dir}/jar"/>
+
+    <property name="main-class"  value="hw11.Httpd"/>
+    <property name="main-class1"  value="hw11.ThreadSafeBankAccountSolution1"/>
+    <property name="main-class2"  value="hw11.ThreadSafeBankAccountSolution2"/>
+    <property name="main-class3"  value="hw11.ThreadSafeBankAccountSolution3"/>
+    <property name="main-class3a"  value="hw11.ThreadSafeBankAccountSolution3a"/>
+    <property name="main-class4"  value="hw11.ThreadSafeBankAccountSolution4"/>
+
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac includeantruntime="false" srcdir="${src.dir}" destdir="${classes.dir}"/>
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="run" depends="jar">
+	<echo message="run ${main-class}"/>
+        <java jar="${jar.dir}/${ant.project.name}.jar" fork="true"/>
+	<echo message="${line.separator}run ${main-class1}"/>
+        <java fork="true" classname="${main-class1}">
+	    <classpath>
+		<path location="${jar.dir}/${ant.project.name}.jar"/>
+	    </classpath>
+	</java>
+	<echo message="${line.separator}run ${main-class2}"/>
+        <java fork="true" classname="${main-class2}">
+	    <classpath>
+		<path location="${jar.dir}/${ant.project.name}.jar"/>
+	    </classpath>
+	</java>
+	<echo message="${line.separator}run ${main-class3}"/>
+        <java fork="true" classname="${main-class3}">
+	    <classpath>
+		<path location="${jar.dir}/${ant.project.name}.jar"/>
+	    </classpath>
+	</java>
+	<echo message="${line.separator}run ${main-class3a}"/>
+        <java fork="true" classname="${main-class3a}">
+	    <classpath>
+		<path location="${jar.dir}/${ant.project.name}.jar"/>
+	    </classpath>
+	</java>
+	<echo message="${line.separator}run ${main-class4}"/>
+        <java fork="true" classname="${main-class4}">
+	    <classpath>
+		<path location="${jar.dir}/${ant.project.name}.jar"/>
+	    </classpath>
+	</java>
+    </target>
+
+    <target name="clean-build" depends="clean,jar"/>
+
+    <target name="main" depends="clean,run"/>
+
+</project>

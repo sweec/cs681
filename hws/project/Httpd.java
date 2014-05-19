@@ -135,7 +135,7 @@ public class Httpd {
 		pool.shutdown();
 	}
 	
-	private static void setup() {
+	public static void setup() {
 		AppInfo app = AppInfo.getInstance();
 		String[] users = {"a", "b", "c"};
 		String[] groups = {"group a", "group b", "group c"};

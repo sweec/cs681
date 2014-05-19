@@ -1,7 +1,8 @@
-package hw16;
+package hw16_17;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.regex.Pattern;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
@@ -35,7 +36,9 @@ public class TinyHttpd2 {
 										client.getInetAddress().toString() );
 					executeCommand( client );
 				}
-			}finally {
+			} catch (SocketException e) {
+				System.out.println("Interrupted, stop.");
+			} finally {
 				serverSocket.close();
 			}
 		}
@@ -123,8 +126,58 @@ public class TinyHttpd2 {
 	}
 	
 	public static void main(String[] args) {
-		TinyHttpd2 server = new TinyHttpd2();
-		server.init();
+		final TinyHttpd2 server = new TinyHttpd2();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				server.init();
+			}
+			
+		}).start();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				try {
+					server.serverSocket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}).start();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				String[] paths = {
+						"http://localhost:8888/",
+				};
+				for (String path:paths)
+					HttpClientGet.get(path);
+			}
+			
+		}).start();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				String[] paths = {
+						"http://localhost:8888/",
+						"http://localhost:8888/a.jpg",
+						"http://localhost:8888/b.png",
+				};
+				for (String path:paths)
+					HttpClientHead.head(path);
+			}
+			
+		}).start();
 	}
 
 }

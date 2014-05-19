@@ -1,8 +1,9 @@
-package hw16;
+package hw16_17;
 
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.TimeZone;
@@ -43,7 +44,9 @@ public class TinyHttpd3 {
 										client.getInetAddress().toString() );
 					new Thread( new Worker(client) ).start();
 				}
-			}finally {
+			} catch (SocketException e) {
+				System.out.println("Interrupted, stop.");
+			} finally {
 				serverSocket.close();
 			}
 		}
@@ -184,8 +187,62 @@ public class TinyHttpd3 {
 	}
 	
 	public static void main(String[] args) {
-		TinyHttpd3 server = new TinyHttpd3();
-		server.init();
+		final TinyHttpd3 server = new TinyHttpd3();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				server.init();
+			}
+			
+		}).start();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				try {
+					server.serverSocket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}).start();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				String[] paths = {
+						"http://localhost:8888/",
+						"http://localhost:8888/fakefile",
+						"http://localhost:8888/fakeDir/a.jpg"
+				};
+				for (String path:paths)
+					HttpClientGet.get(path);
+			}
+			
+		}).start();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				String[] paths = {
+						"http://localhost:8888/",
+						"http://localhost:8888/a.jpg",
+						"http://localhost:8888/b.png",
+						"http://localhost:8888/fakefile",
+						"http://localhost:8888/fakeDir/a.jpg"
+				};
+				for (String path:paths)
+					HttpClientHead.head(path);
+			}
+			
+		}).start();
 	}
 
 }

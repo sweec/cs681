@@ -1,10 +1,11 @@
-package hw17;
+package hw16_17;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.SocketException;
 import java.net.URL;
 
 public class HttpClientHead {
@@ -26,13 +27,24 @@ public class HttpClientHead {
 				System.out.println( "I/O setup done." );
 
 				String line = in.readLine();
+				int len = 0;
 				while ( in.ready() && line != null ) {                  
 					System.out.println(line);
+					if (line.startsWith("Content-Length: "))
+						len = Integer.parseInt(line.substring(line.indexOf(" ")+1));
+					if (line.equals(""))
+						break;
 					line = in.readLine();
 				}
-				if (line != null)
-					System.out.println(line);
+				if (len>0) {
+					char[] buf = new char[len];
+					in.read(buf);
+					System.out.println(String.valueOf(buf));
+				}
 			}
+		} catch (SocketException e) {
+			System.out.println("Interrupted, stop");
+			return;
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 			return;

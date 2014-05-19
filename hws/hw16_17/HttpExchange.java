@@ -1,4 +1,4 @@
-package hw16;
+package hw16_17;
 
 import java.io.BufferedReader;
 import java.io.PrintStream;
@@ -25,21 +25,27 @@ public class HttpExchange {
 		this.server = server;
 		this.client = client;
 		this.out = out;
-		client.setSoTimeout(30000);
+		client.setSoTimeout(1000);
 		String line = in.readLine();
 		requestLine = line.split("\\s+");
 		System.out.println(line);
+		Integer len = 0;
 		line = in.readLine();
 		while( line != null ) {
 			System.out.println(line);
-			if(line.equals("")) break;
+			if(line.isEmpty()) break;
 			String[] kv = line.split(":[ ]*", 2);
-			if (kv.length > 1)
+			if (kv.length > 1) {
 				requestHead.put(kv[0], kv[1]);
+				if (kv[0].equalsIgnoreCase("Content-Length"))
+					len = Integer.parseInt(kv[1]);
+			}
 			line = in.readLine();
 		}
-		if (getRequestCommand().equals("POST")) {
-			requestBody = in.readLine();
+		if (len != null && len > 0) {
+			char[] buf = new char[len];
+			in.read(buf);
+			requestBody = String.valueOf(buf);
 			System.out.println(requestBody);
 		}
 	}
@@ -87,7 +93,13 @@ public class HttpExchange {
 		responseLine = "HTTP/1.0 200 OK";
 	}
 	public void makeErrorResponse(int code) {
-		responseLine = "HTTP/1.0 "+code+" "+getHttpStatus(code);
+		String status = getHttpStatus(code);
+		responseLine = "HTTP/1.0 "+code+" "+status;
+		setResponseHeader("Server", "Java socket "+System.getProperty("os.name"));
+		setResponseHeader("Connection","Keep-Alive");
+		setResponseHeader("Content-Length", String.valueOf(status.length()));
+		setResponseHeader("Date", HttpUtility.getGMT(System.currentTimeMillis()));
+		responseBody = status.getBytes();
 	}
 	private static final HashMap<Integer, String> httpStatus = new HashMap<Integer, String>();
 	static {

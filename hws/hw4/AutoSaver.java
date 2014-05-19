@@ -15,7 +15,8 @@ public class AutoSaver implements Runnable {
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				System.out.println("Autosaver thread is interrupted, stop.");
+				break;
 			}
 		}
 	}

@@ -53,14 +53,33 @@ public class HttpClient {
 	}
 	
 	public static void main(String[] args) {
-		String[] paths = {
-				"http://localhost:8888/",
-				"http://localhost:8888/a.jpg",
-				"http://localhost:8888/b.png",
-				"http://localhost:8888/fakefile",
-				"http://localhost:8888/fakeDir/a.jpg"
-		};
-		for (String path:paths)
-			head(path);
+		final Httpd server = new Httpd(args);
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				Httpd.setup();
+				server.run();
+			}
+			
+		}).start();
+		for (int i=0;i<3;i++)
+			new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					String[] paths = {
+							"http://localhost:8888/",
+							"http://localhost:8888/a.jpg",
+							"http://localhost:8888/b.png",
+							"http://localhost:8888/fakefile",
+							"http://localhost:8888/fakeDir/a.jpg",
+							"http://localhost:8888/site/admin/stop.html"
+					};
+					for (String path:paths)
+						head(path);
+				}
+				
+			}).start();
 	}
 }

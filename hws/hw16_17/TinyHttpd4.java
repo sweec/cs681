@@ -1,8 +1,10 @@
-package hw16;
+package hw16_17;
 
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
@@ -13,7 +15,7 @@ import java.io.PrintStream;
 
 public class TinyHttpd4 {
 	private static final int PORT = 8888;
-	private ServerSocket serverSocket;
+	private ServerSocket serverSocket = null;
 
 	public void init() {
 		try {
@@ -30,8 +32,11 @@ public class TinyHttpd4 {
 										client.getInetAddress().toString() );
 					new Thread( new Worker(client) ).start();
 				}
-			}finally {
-				serverSocket.close();
+			} catch (SocketException e) {
+				System.out.println("Interrupted, stop.");
+			} finally {
+				if (serverSocket != null)
+					serverSocket.close();
 			}
 		}
 		catch(IOException exception){
@@ -53,16 +58,35 @@ public class TinyHttpd4 {
 				PrintStream out = new PrintStream( client.getOutputStream() );
 				System.out.println( "I/O setup done" );
 				try {
+					long before = System.currentTimeMillis();
 					while (true) {
 						try {
-							boolean done = executeCommand(new HttpExchange(client, serverSocket, in, out));
-							if (done)
+							HttpExchange ex = new HttpExchange(client, serverSocket, in, out);
+							executeCommand(ex);
+							before = System.currentTimeMillis();
+							if (!ex.isPersistent())
 								break;
+						} catch(SocketTimeoutException exception) {
+							System.out.println("Client read time out.");
+							break;
+						} catch (SocketException e) {
+							System.out.println("Thread "+Thread.currentThread().getId()+": Interrupted, stop.");
+							break;
+						} catch (IOException e) {
+							System.out.println("Thread "+Thread.currentThread().getId()+": Interrupted, stop.");
+							break;
 						} catch (Exception e) {
 							try {
+								long current = System.currentTimeMillis();
+								if (current-before>1000) {
+									System.out.println("Client read time out.");
+									break;
+								}
 								Thread.sleep(100);
+								//System.out.println("hit here: "+e.getMessage());
 							} catch (InterruptedException e1) {
-								e1.printStackTrace();
+								System.out.println("Interrupted, stop");
+								break;
 							}
 						}
 					}
@@ -78,13 +102,11 @@ public class TinyHttpd4 {
 		}
 	}
 	
-	private boolean executeCommand( HttpExchange he) {
-		String command = he.getRequestCommand();
-		if (command == null)
-			return true;
-		String url = he.getRrequestURI();
+	private void executeCommand( HttpExchange ex) {
+		String command = ex.getRequestCommand();
+		String url = ex.getRrequestURI();
 		if(!url.startsWith("/"))
-			he.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
+			ex.makeErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST);
 		else {
 			if (url.equals("/"))
 				url = "index.html";
@@ -94,27 +116,23 @@ public class TinyHttpd4 {
 			File file = new File(url);
 			System.out.println(file.getName() + " requested.");
 			if (!file.exists())
-				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
+				ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_FOUND);
 			else if (HttpUtility.isGetCommand(command)) {
 				if (type == null)
-					he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+					ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 				else {
-					setResponseHeader(he, file, type);  
-					sendFile(he, file, type);
+					setResponseHeader(ex, file, type);  
+					sendFile(ex, file, type);
 				}
 			} else if (HttpUtility.isHeadCommand(command)) {
-				setResponseHeader(he, file, type);
+				setResponseHeader(ex, file, type);
 			} else if (HttpUtility.isPostCommand(command)) {
-				System.out.println(he.getRequestBody());
-				he.makeSuccessfulResponse();
+				System.out.println(ex.getRequestBody());
+				ex.makeSuccessfulResponse();
 			} else
-				he.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
-			he.sendResponse();
+				ex.makeErrorResponse(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+			ex.sendResponse();
 		}
-		if (he.isPersistent())
-			return false;
-		else
-			return true;
 	}
 	
 	private void sendFile(HttpExchange he, File file, String type){
@@ -143,8 +161,66 @@ public class TinyHttpd4 {
 	}
 	
 	public static void main(String[] args) {
-		TinyHttpd4 server = new TinyHttpd4();
-		server.init();
+		final TinyHttpd4 server = new TinyHttpd4();
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				server.init();
+				System.out.println("Sever is over");
+			}
+			
+		}).start();
+		
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				String[] paths = {
+						"http://localhost:8888/",
+						"http://localhost:8888/fakefile",
+						"http://localhost:8888/fakeDir/a.jpg"
+				};
+				for (String path:paths)
+					HttpClientGet.get(path);
+				System.out.println("Get test done");
+			}
+			
+		}).start();
+		
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				String[] paths = {
+						"http://localhost:8888/",
+				};
+				for (String path:paths)
+					HttpClientHead.head(path);
+				System.out.println("Head test done");
+			}
+			
+		}).start();
+		
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				try {
+					server.serverSocket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				System.out.println("Stop command issued");
+			}
+			
+		}).start();
+		
 	}
 
 }

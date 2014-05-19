@@ -1,5 +1,5 @@
 #---No Comment---
-#Sun May 18 23:46:43 EDT 2014
+#Sun May 18 23:50:19 EDT 2014
 /site/admin/stop.html=root
 /site/c/page1.html=group c
 basic=Yzpj\:c;Yjpi\:b;YWRtaW46YWRtaW4\=\:admin;YTph\:a
@@ -8,9 +8,9 @@ digest=b\:8d4c5016ec0d0113dac0815de9450a2d;c\:a336cf720406e9c2c68371d6e4457d87;a
 /site/a/page1.html=group a
 /site/c/page2.html=group c
 group\ c=c
-group\ b=b
 root=admin
-group\ a=a
+group\ b=b
 /site/b/page2.html=group b
+group\ a=a
 /site/a/page2.html=group a
 /site/admin/page1.html=root
