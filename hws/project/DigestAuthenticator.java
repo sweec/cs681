@@ -6,7 +6,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class DigestAuthenticator implements Authenticator {
-	private String realm = "digest realm";
+	//private String realm = "digest realm";
 	private HashMap<String, String> nonces = new HashMap<String, String>();
 	private HashMap<String, Long> time = new HashMap<String, Long>();
 	private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -17,8 +17,8 @@ public class DigestAuthenticator implements Authenticator {
 		if (url == null)
 			return true;
 		AppInfo app = AppInfo.getInstance();
-		String group = app.getProperty(url);
-		if (group == null)
+		String realm = app.getProperty(url);
+		if (realm == null)
 			return true;
 		String digestInfo = ex.getRequestHeader("Authorization");
 		String client = ex.getRemoteUniqueId();
@@ -33,7 +33,7 @@ public class DigestAuthenticator implements Authenticator {
 				DigestRequest request = new DigestRequest(digestInfo.split(" ", 2)[1].trim());
 				String username = request.getRequestInfo("username");
 				if (username == null) break;
-				if (!app.hasGroupUser(group, username)) break;
+				if (!app.hasRealmUser(realm, username)) break;
 				String requestRealm = request.getRequestInfo("realm");
 				if (!realm.equals(requestRealm)) break;
 				String requestNonce = request.getRequestInfo("nonce");

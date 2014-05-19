@@ -103,18 +103,18 @@ public class AppInfo {
 		applicationProps.setProperty(type, users.toString());
 	}
 	
-	public void addToGroup(String username, String group) {
-		if (!hasGroupUser(group, username)) {
-			String users = applicationProps.getProperty(group);
+	public void addToRealm(String username, String realm) {
+		if (!hasRealmUser(realm, username)) {
+			String users = applicationProps.getProperty(realm);
 			if (users == null)
-				applicationProps.setProperty(group, username);
+				applicationProps.setProperty(realm, username);
 			else
-				applicationProps.setProperty(group, users+","+username);
+				applicationProps.setProperty(realm, users+","+username);
 		}
 	}
 	
-	public boolean hasGroupUser(String group, String username) {
-		String users = applicationProps.getProperty(group);
+	public boolean hasRealmUser(String realm, String username) {
+		String users = applicationProps.getProperty(realm);
 		if (users == null)
 			return false;
 		for (String user:users.split(","))

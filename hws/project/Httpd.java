@@ -144,13 +144,13 @@ public class Httpd {
 		for (int i=0;i<users.length;i++) {
 			app.addBasicUser(users[i], users[i]);
 			app.addDigestUser(users[i], users[i], "digest realm");
-			app.addToGroup(users[i], groups[i]);
+			app.addToRealm(users[i], groups[i]);
 			app.setProperty(html1s[i], groups[i]);
 			app.setProperty(html2s[i], groups[i]);
 		}
 		app.addBasicUser("admin", "admin");
 		app.addDigestUser("admin", "admin", "digest realm");
-		app.addToGroup("admin", "root");
+		app.addToRealm("admin", "root");
 		app.setProperty("/site/admin/page1.html", "root");
 		app.setProperty("/site/admin/stop.html", "root");
 	}
