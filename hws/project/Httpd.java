@@ -138,21 +138,22 @@ public class Httpd {
 	public static void setup() {
 		AppInfo app = AppInfo.getInstance();
 		String[] users = {"a", "b", "c"};
-		String[] groups = {"group a", "group b", "group c"};
+		String[] realms = {"group a@local", "group b@local", "group c@local"};
 		String[] html1s = {"/site/a/page1.html", "/site/b/page1.html", "/site/c/page1.html"};
 		String[] html2s = {"/site/a/page2.html", "/site/b/page2.html", "/site/c/page2.html"};
 		for (int i=0;i<users.length;i++) {
 			app.addBasicUser(users[i], users[i]);
-			app.addDigestUser(users[i], users[i], "digest realm");
-			app.addToRealm(users[i], groups[i]);
-			app.setProperty(html1s[i], groups[i]);
-			app.setProperty(html2s[i], groups[i]);
+			app.addDigestUser(users[i], users[i], realms[i]);
+			app.addToRealm(users[i], realms[i]);
+			app.setProperty(html1s[i], realms[i]);
+			app.setProperty(html2s[i], realms[i]);
 		}
+		String realm = "root@local";
 		app.addBasicUser("admin", "admin");
-		app.addDigestUser("admin", "admin", "digest realm");
-		app.addToRealm("admin", "root");
-		app.setProperty("/site/admin/page1.html", "root");
-		app.setProperty("/site/admin/stop.html", "root");
+		app.addDigestUser("admin", "admin", realm);
+		app.addToRealm("admin", realm);
+		app.setProperty("/site/admin/page1.html", realm);
+		app.setProperty("/site/admin/stop.html", realm);
 	}
 	
 	public static void main(String[] args) {

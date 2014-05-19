@@ -1,16 +1,20 @@
 #---No Comment---
-#Sun May 18 23:46:43 EDT 2014
-/site/admin/stop.html=root
-/site/c/page1.html=group c
+#Mon May 19 00:09:04 EDT 2014
+/site/b/page1.html=group b@local
+/site/b/page2.html=group b@local
 basic=Yzpj\:c;Yjpi\:b;YWRtaW46YWRtaW4\=\:admin;YTph\:a
-/site/b/page1.html=group b
-digest=b\:8d4c5016ec0d0113dac0815de9450a2d;c\:a336cf720406e9c2c68371d6e4457d87;admin\:e765fe5ad815bfb68396ce5641eaf3f0;a\:26dbc79372bdd17049cd10601ee7c423
-/site/a/page1.html=group a
-/site/c/page2.html=group c
+/site/c/page1.html=group c@local
+root@local=admin
+group\ c@local=c
+group\ b@local=b
+/site/c/page2.html=group c@local
+/site/admin/stop.html=root@local
+/site/admin/page1.html=root@local
 group\ c=c
 group\ b=b
-root=admin
 group\ a=a
-/site/b/page2.html=group b
-/site/a/page2.html=group a
-/site/admin/page1.html=root
+root=admin
+/site/a/page1.html=group a@local
+digest=b\:94e5d8478ebfecc8bf6a62e3ea162fa0;c\:32f5bd99b397e8354a53bab146f7d673;admin\:e00c426d8a5ef73720673e5384d70185;a\:6f68ad62292a6468951b21d42df63866
+group\ a@local=a
+/site/a/page2.html=group a@local
